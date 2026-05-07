@@ -88,32 +88,6 @@ Each algorithm step is one file under `wave/maxwell/`:
 The Qt bridge that turns spec output into animation frames is
 `wave/maxwell/adapter.py`.
 
-## Programmatic API
-
-```python
-from wave.maxwell import MaxwellSpec, compute_psi
-import numpy as np
-
-def f(E):
-    E = np.asarray(E, dtype=float)
-    out = np.zeros((E.size, 1, 2), dtype=complex)
-    out[:, 0, 0] = np.exp(-E**2 / (2 * 0.3**2))
-    return out
-
-spec = MaxwellSpec(
-    L=1, a=np.array([1.0]),
-    N=-100, M=100,
-    j_sites=np.array([], dtype=int),
-    V_sites=np.zeros((0, 1, 1), dtype=complex),
-    interval=(-1.5, 1.5),
-    f=f,
-    times=np.linspace(0, 30, 80),
-    n_quad=64,
-)
-spec.validate()
-psi = compute_psi(spec)        # shape (n_t, n_sites), real, non-negative
-```
-
 ## Open question for the author
 
 Step 5 as written in the spec doesn't produce honest `H`-eigenfunctions. Hand
