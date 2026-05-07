@@ -1,0 +1,16 @@
+[project]
+name = "maxwell-algorithm"
+version = "0.1.0"
+description = "Schober's matrix-valued lattice scattering algorithm with a PyQt6 viewer."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.2",
+    "pyqt6>=6.10.2",
+]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.19.0",
+]
