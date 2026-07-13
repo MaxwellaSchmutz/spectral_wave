@@ -7,10 +7,13 @@ waterfall heatmap of psi over the full time horizon.
 
 from __future__ import annotations
 
+import shutil
+
 import numpy as np
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
+    QFileDialog,
     QFormLayout,
     QFrame,
     QHBoxLayout,
@@ -25,7 +28,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from matplotlib import animation
 from matplotlib import patheffects as pe
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -269,7 +274,8 @@ PRESETS: dict[str, dict | None] = {
         j_sites="", V_sites="[]",
         interval_lo="-1.5", interval_hi="1.5",
         E0="0.0", sigma_E="0.30",
-        n_t="120", t_max="50", n_quad="64",
+        sigma_mode="right", n_init="0",
+        n_t="120", t_min="0", t_max="50", n_quad="128",
         outer="+",
     ),
     "Single Barrier — partial reflection": dict(
@@ -277,7 +283,8 @@ PRESETS: dict[str, dict | None] = {
         j_sites="0", V_sites="[[[0.6]]]",
         interval_lo="-1.5", interval_hi="1.5",
         E0="0.0", sigma_E="0.25",
-        n_t="140", t_max="55", n_quad="64",
+        sigma_mode="right", n_init="0",
+        n_t="140", t_min="0", t_max="55", n_quad="128",
         outer="+",
     ),
     "Single Well — attractive site": dict(
@@ -285,7 +292,8 @@ PRESETS: dict[str, dict | None] = {
         j_sites="0", V_sites="[[[-0.8]]]",
         interval_lo="-1.5", interval_hi="1.5",
         E0="0.0", sigma_E="0.25",
-        n_t="140", t_max="55", n_quad="64",
+        sigma_mode="right", n_init="0",
+        n_t="140", t_min="0", t_max="55", n_quad="128",
         outer="+",
     ),
     "Double Barrier — resonant cavity": dict(
@@ -293,7 +301,8 @@ PRESETS: dict[str, dict | None] = {
         j_sites="-6, 6", V_sites="[[[0.55]], [[0.55]]]",
         interval_lo="-1.3", interval_hi="1.3",
         E0="0.0", sigma_E="0.20",
-        n_t="160", t_max="65", n_quad="80",
+        sigma_mode="right", n_init="0",
+        n_t="160", t_min="0", t_max="65", n_quad="128",
         outer="+",
     ),
     "Strong Wall — near-total reflection": dict(
@@ -301,7 +310,8 @@ PRESETS: dict[str, dict | None] = {
         j_sites="0", V_sites="[[[3.5]]]",
         interval_lo="-1.5", interval_hi="1.5",
         E0="0.0", sigma_E="0.30",
-        n_t="120", t_max="50", n_quad="64",
+        sigma_mode="right", n_init="0",
+        n_t="120", t_min="0", t_max="50", n_quad="128",
         outer="+",
     ),
     "Weak Barrier — small kick": dict(
@@ -309,7 +319,8 @@ PRESETS: dict[str, dict | None] = {
         j_sites="0", V_sites="[[[0.12]]]",
         interval_lo="-1.5", interval_hi="1.5",
         E0="0.0", sigma_E="0.30",
-        n_t="120", t_max="50", n_quad="64",
+        sigma_mode="right", n_init="0",
+        n_t="120", t_min="0", t_max="50", n_quad="128",
         outer="+",
     ),
     "Wide Barrier — tunneling": dict(
@@ -317,7 +328,8 @@ PRESETS: dict[str, dict | None] = {
         j_sites="-3, -1, 1, 3", V_sites="[[[0.45]], [[0.45]], [[0.45]], [[0.45]]]",
         interval_lo="-1.5", interval_hi="1.5",
         E0="0.0", sigma_E="0.20",
-        n_t="140", t_max="55", n_quad="80",
+        sigma_mode="right", n_init="0",
+        n_t="140", t_min="0", t_max="55", n_quad="144",
         outer="+",
     ),
     "Random Lattice (L=1)": dict(
@@ -325,7 +337,8 @@ PRESETS: dict[str, dict | None] = {
         j_sites="-9, -4, 0, 5, 11", V_sites="[[[0.30]], [[-0.40]], [[0.55]], [[-0.20]], [[0.35]]]",
         interval_lo="-1.5", interval_hi="1.5",
         E0="0.0", sigma_E="0.25",
-        n_t="160", t_max="60", n_quad="80",
+        sigma_mode="right", n_init="0",
+        n_t="160", t_min="0", t_max="60", n_quad="144",
         outer="+",
     ),
     "Two-Channel Free (L=2)": dict(
@@ -333,7 +346,8 @@ PRESETS: dict[str, dict | None] = {
         j_sites="", V_sites="[]",
         interval_lo="-0.9", interval_hi="0.9",
         E0="0.0", sigma_E="0.20",
-        n_t="140", t_max="60", n_quad="64",
+        sigma_mode="right", n_init="0",
+        n_t="140", t_min="0", t_max="60", n_quad="128",
         outer="+",
     ),
     "Two-Channel Coupled Scatterer (L=2)": dict(
@@ -341,7 +355,8 @@ PRESETS: dict[str, dict | None] = {
         j_sites="0", V_sites="[[[0.40, 0.25j], [-0.25j, -0.20]]]",
         interval_lo="-0.9", interval_hi="0.9",
         E0="0.0", sigma_E="0.20",
-        n_t="140", t_max="60", n_quad="80",
+        sigma_mode="right", n_init="0",
+        n_t="140", t_min="0", t_max="60", n_quad="128",
         outer="+",
     ),
     "Slow Packet — near band edge": dict(
@@ -349,7 +364,26 @@ PRESETS: dict[str, dict | None] = {
         j_sites="", V_sites="[]",
         interval_lo="-1.95", interval_hi="-1.40",
         E0="-1.65", sigma_E="0.12",
-        n_t="120", t_max="80", n_quad="80",
+        sigma_mode="right", n_init="0",
+        n_t="120", t_min="0", t_max="80", n_quad="80",
+        outer="+",
+    ),
+    "Schober 1 — two-channel window": dict(
+        L="2", a="2, 1", N="-10", M="10",
+        j_sites="0", V_sites="[[[0, 1], [1, 0]]]",
+        interval_lo="-0.7", interval_hi="0.6",
+        E0="0.5", sigma_E="0.1",
+        sigma_mode="balanced", n_init="0",
+        n_t="160", t_min="-8", t_max="8", n_quad="200",
+        outer="+",
+    ),
+    "Schober 2 — two-channel + barrier": dict(
+        L="2", a="2, 1", N="-100", M="100",
+        j_sites="0, 40", V_sites="[[[0, 1], [1, 0]], [[5, 0], [0, -3]]]",
+        interval_lo="-0.7", interval_hi="0.6",
+        E0="0.5", sigma_E="0.1",
+        sigma_mode="balanced", n_init="0",
+        n_t="200", t_min="-40", t_max="40", n_quad="200",
         outer="+",
     ),
     "Custom — edit fields below": None,
@@ -390,9 +424,80 @@ PRESET_DESCRIPTIONS: dict[str, str] = {
     "Slow Packet — near band edge":
         "Packet centered at E₀=−1.65, near the band edge −2a. Low group "
         "velocity gives a slow, narrow drift — the waterfall looks vertical.",
+    "Schober 1 — two-channel window":
+        "Schober's test config: L=2 (a=2,1), antidiagonal V(0)=[[0,1],[1,0]] "
+        "mixes the channels. f is a fixed window — channel 1 on [0.4,0.6] (both "
+        "σ), channel 2 on [−0.7,−0.5] (σ=+ only) — integrated per-window "
+        "(spectral quadrature). Time runs from negative t: the packet converges, "
+        "scatters, departs. Editing any field switches back to a Gaussian.",
+    "Schober 2 — two-channel + barrier":
+        "Schober's larger config: adds a diagonal barrier V(40)=[[5,0],[0,−3]] at "
+        "j=40 on a wide lattice, so the windowed two-channel packet scatters off "
+        "both sites. Same fixed window f and per-window quadrature as Schober 1; "
+        "time again runs from negative t (converge → scatter → depart).",
     "Custom — edit fields below":
         "Edit any field below to customise. The dropdown auto-switches "
         "to Custom whenever you hand-edit.",
+}
+
+
+# Sigma-mode choices for the Gaussian f: combo label -> (h_plus, h_minus)
+# weights on the two σ channels (memo B.1). Balanced (1,1) gives Schober's
+# standing packet; right / left select a single propagation direction.
+SIGMA_MODES: dict[str, tuple[float, float]] = {
+    "balanced (1,1)": (1.0, 1.0),
+    "right (1,0)":    (1.0, 0.0),
+    "left (0,1)":     (0.0, 1.0),
+}
+
+
+def min_nquad(N, M, t_min, t_max, lo, hi, a_list) -> int:
+    """Smallest safe MaxwellSpec.n_quad for a single-interval run.
+
+    Gauss-Legendre must resolve the integrand phase e^{-i(n*theta(E) + t*E)}:
+    total phase variation PV = n_max*Dtheta + t_amp*(hi-lo) needs about one
+    node per pi (Nyquist), plus margin. Measured aliasing thresholds sit at
+    0.80-0.95*PV/pi across twelve configurations, so this bound carries >=20%
+    headroom. Below it a phantom mirror packet appears and the total mass
+    roughly doubles -- invisible in the t=0 frame, obvious in the waterfall.
+    """
+    n_max = max(abs(int(N)), abs(int(M)))
+    t_amp = max(abs(float(t_min)), abs(float(t_max)))
+    dtheta = 0.0
+    for a_l in a_list:
+        c_lo = float(np.clip(lo / (2.0 * a_l), -1.0, 1.0))
+        c_hi = float(np.clip(hi / (2.0 * a_l), -1.0, 1.0))
+        dtheta = max(dtheta, abs(float(np.arccos(c_lo) - np.arccos(c_hi))))
+    return max(8, int(np.ceil((n_max * dtheta + t_amp * (hi - lo)) / np.pi)) + 8)
+
+
+# Schober's window presets use a step-function f (indicator on [c, d]) with per-
+# channel / per-sigma amplitudes, which the Gaussian form fields cannot express.
+# _build_spec uses these directly (keyed by preset name) instead of the form f.
+def _schober_window_f(E):
+    """f_{1,+/-}=1 on [0.4,0.6]; f_{2,+}=1 on [-0.7,-0.5]; f_{2,-}=0. (L=2)"""
+    E = np.asarray(E, dtype=float)
+    out = np.zeros((E.size, 2, 2), dtype=complex)
+    ch1 = (E >= 0.4) & (E <= 0.6)
+    ch2 = (E >= -0.7) & (E <= -0.5)
+    out[ch1, 0, 0] = 1.0   # f_{1,+}
+    out[ch1, 0, 1] = 1.0   # f_{1,-}
+    out[ch2, 1, 0] = 1.0   # f_{2,+}
+    return out
+
+
+PRESET_F = {
+    "Schober 1 — two-channel window": _schober_window_f,
+    "Schober 2 — two-channel + barrier": _schober_window_f,
+}
+
+
+# Energy windows matching _schober_window_f's support. _build_spec passes these
+# as MaxwellSpec.E_segments so quadrature runs per-window (spectrally convergent
+# for step-function f) instead of one rule across all of `interval`.
+PRESET_SEGMENTS = {
+    "Schober 1 — two-channel window": [(-0.7, -0.5), (0.4, 0.6)],
+    "Schober 2 — two-channel + barrier": [(-0.7, -0.5), (0.4, 0.6)],
 }
 
 
@@ -418,6 +523,140 @@ class MaxwellWorker(QThread):
             self.finished.emit([], 0.0)
             return
         self.finished.emit(frames, float(gmax))
+
+
+# =====================================================================
+# Export worker
+# =====================================================================
+class ExportWorker(QThread):
+    """Render the computed frames to an .mp4 (ffmpeg) or .gif (Pillow) file.
+
+    Runs entirely off the GUI thread, so it builds its OWN Agg figure and
+    never touches the MainWindow canvas / axes — sharing matplotlib artists
+    across threads is exactly what crashed the old export. Only plain data
+    (lists, arrays, floats, module colour strings) crosses the boundary.
+    """
+
+    progress = pyqtSignal(int)
+    done = pyqtSignal(str)
+    failed = pyqtSignal(str)
+
+    def __init__(self, frames, lattice, times, j_sites, gmax, ylim,
+                 path, use_ffmpeg):
+        super().__init__()
+        self.frames = frames
+        self.lattice = np.asarray(lattice)
+        self.times = np.asarray(times, dtype=float)
+        self.j_sites = np.asarray(j_sites, dtype=int)
+        self.gmax = float(gmax)
+        self.ylim = float(ylim)
+        self.path = path
+        self.use_ffmpeg = use_ffmpeg
+
+    def run(self):
+        try:
+            fig = Figure(figsize=(12.8, 7.2), dpi=100)
+            FigureCanvasAgg(fig)  # attach a private Agg canvas, never the GUI's
+            fig.patch.set_facecolor(BG_DEEP)
+            gs = fig.add_gridspec(
+                2, 1, height_ratios=[1.0, 1.55], hspace=0.10,
+                left=0.075, right=0.965, top=0.945, bottom=0.085,
+            )
+            ax_line = fig.add_subplot(gs[0])
+            ax_water = fig.add_subplot(gs[1], sharex=ax_line)
+            self._style_axes(ax_line, ax_water)
+
+            # Static spacetime waterfall + moving current-time line
+            psi = np.array([fr[0] for fr in self.frames])  # (n_t, n_sites)
+            ax_water.imshow(
+                psi,
+                aspect="auto",
+                origin="lower",
+                extent=[
+                    float(self.lattice[0]) - 0.5,
+                    float(self.lattice[-1]) + 0.5,
+                    float(self.times[0]),
+                    float(self.times[-1]),
+                ],
+                cmap="plasma",
+                interpolation="bilinear",
+                vmin=0.0,
+                vmax=max(self.gmax, 1e-12),
+            )
+            for jk in self.j_sites:
+                ax_water.axvline(jk, color="white", alpha=0.30, lw=0.8, zorder=5)
+                ax_line.axvline(jk, color=ACCENT, alpha=0.42, lw=0.9, zorder=2)
+            time_line = ax_water.axhline(
+                float(self.times[0]), color="white", alpha=0.85, lw=1.4, zorder=10,
+            )
+            time_line.set_path_effects([
+                pe.Stroke(linewidth=4, foreground="white", alpha=0.22),
+                pe.Normal(),
+            ])
+            ax_water.set_xlim(self.lattice[0], self.lattice[-1])
+            ax_water.set_ylim(self.times[0], self.times[-1])
+
+            # Animated psi curve on top
+            curve0 = self.frames[0][0]
+            (line,) = ax_line.plot(
+                self.lattice, curve0,
+                lw=2.0, color=ACCENT2, solid_capstyle="round",
+            )
+            line.set_path_effects([
+                pe.Stroke(linewidth=6, foreground=ACCENT2, alpha=0.28),
+                pe.Normal(),
+            ])
+            fill = ax_line.fill_between(
+                self.lattice, 0, curve0, color=ACCENT2, alpha=0.18,
+            )
+            ax_line.set_xlim(self.lattice[0], self.lattice[-1])
+            ax_line.set_ylim(0, self.ylim)
+
+            if self.use_ffmpeg:
+                writer = animation.FFMpegWriter(fps=30, bitrate=4000)
+            else:
+                writer = animation.PillowWriter(fps=30)
+
+            n_frames = len(self.frames)
+            with writer.saving(fig, self.path, dpi=100):
+                for i, frame in enumerate(self.frames):
+                    curve = frame[0]
+                    line.set_ydata(curve)
+                    try:
+                        fill.remove()
+                    except Exception:
+                        pass
+                    fill = ax_line.fill_between(
+                        self.lattice, 0, curve, color=ACCENT2, alpha=0.18,
+                    )
+                    t_now = float(self.times[i])
+                    time_line.set_ydata([t_now, t_now])
+                    ax_line.set_title(f"t = {t_now:.3f}", fontsize=11)
+                    writer.grab_frame()
+                    self.progress.emit(int(round(100 * (i + 1) / n_frames)))
+        except Exception as exc:
+            self.failed.emit(f"{type(exc).__name__}: {exc}")
+            return
+        self.done.emit(self.path)
+
+    @staticmethod
+    def _style_axes(ax_line, ax_water):
+        """Replicate the MainWindow axis styling on the worker's own axes."""
+        for ax in (ax_line, ax_water):
+            ax.set_facecolor(BG_PLOT)
+            for spine in ax.spines.values():
+                spine.set_color(BORDER)
+            ax.tick_params(colors=TEXT_DIM, which="both", direction="out", length=4)
+            ax.xaxis.label.set_color(TEXT_DIM)
+            ax.yaxis.label.set_color(TEXT_DIM)
+        ax_line.title.set_color(TEXT_PRIM)
+        ax_line.set_ylabel("ψ(n, t)", labelpad=6)
+        ax_line.grid(True, color=BORDER, alpha=0.32, linewidth=0.6)
+        ax_line.tick_params(labelbottom=False)
+        ax_water.set_xlabel("lattice site n", labelpad=6)
+        ax_water.set_ylabel("time t", labelpad=6)
+        ax_water.set_title("spacetime  ψ(n, t)", fontsize=10, loc="left",
+                           color=TEXT_FAINT, pad=4)
 
 
 # =====================================================================
@@ -492,7 +731,11 @@ class MainWindow(QMainWindow):
         self.in_b_hi    = QLineEdit()
         self.in_E0      = QLineEdit()
         self.in_sigma_E = QLineEdit()
+        self.in_sigma_mode = QComboBox()
+        self.in_sigma_mode.addItems(list(SIGMA_MODES))
+        self.in_n_init  = QLineEdit()
         self.in_n_t     = QLineEdit()
+        self.in_t_min   = QLineEdit()
         self.in_t_max   = QLineEdit()
         self.in_n_quad  = QLineEdit()
         self.in_outer   = QComboBox()
@@ -508,8 +751,11 @@ class MainWindow(QMainWindow):
         form.addRow("Interval  upper",     self.in_b_hi)
         form.addRow("Wave packet  E₀",     self.in_E0)
         form.addRow("Wave packet  σ_E",    self.in_sigma_E)
+        form.addRow("Sigma mode",          self.in_sigma_mode)
+        form.addRow("Start site  n_init",  self.in_n_init)
         form.addRow("Outer sign",          self.in_outer)
         form.addRow("Time frames  n_t",    self.in_n_t)
+        form.addRow("Time start  t_min",   self.in_t_min)
         form.addRow("Time horizon  t_max", self.in_t_max)
         form.addRow("Quadrature  n_quad",  self.in_n_quad)
 
@@ -595,6 +841,12 @@ class MainWindow(QMainWindow):
         self.speed_combo.currentTextChanged.connect(self._speed_changed)
         cb.addWidget(self.speed_combo)
 
+        self.export_btn = QPushButton("⬇  Export")
+        self.export_btn.setObjectName("icon")
+        self.export_btn.setEnabled(False)
+        self.export_btn.clicked.connect(self._export_clicked)
+        cb.addWidget(self.export_btn)
+
         right_v.addWidget(controlbar)
 
         # Stats strip below the controls
@@ -649,25 +901,27 @@ class MainWindow(QMainWindow):
         self.line_potential_lines = []
         self.water_potential_lines = []
         self._j_sites_for_render = np.array([], dtype=int)
+        self._nquad_warning = ""
 
         # ---------------- Worker lifecycle ----------------
         # Only the worker tagged with the current token is allowed to update
         # the UI; older workers are silently dismissed when their `finished`
         # signal eventually fires. _inflight_workers keeps Python references
-        # to running QThreads alive until they exit, so Qt doesn't tear them
-        # down mid-run.
+        # to running QThreads (compute AND export) alive until they exit, so
+        # Qt doesn't tear them down mid-run.
         self._compute_token = 0
         self.worker: MaxwellWorker | None = None
-        self._inflight_workers: list[MaxwellWorker] = []
+        self._inflight_workers: list[QThread] = []
 
         # ---------------- Wire signals AFTER UI is built ----------------
         self.preset_combo.currentTextChanged.connect(self._preset_changed)
         for inp in (self.in_L, self.in_a, self.in_N, self.in_M,
                     self.in_j_sites, self.in_V_sites, self.in_a_lo, self.in_b_hi,
-                    self.in_E0, self.in_sigma_E, self.in_n_t, self.in_t_max,
-                    self.in_n_quad):
+                    self.in_E0, self.in_sigma_E, self.in_n_init, self.in_n_t,
+                    self.in_t_min, self.in_t_max, self.in_n_quad):
             inp.textChanged.connect(self._field_edited)
         self.in_outer.currentTextChanged.connect(self._field_edited)
+        self.in_sigma_mode.currentTextChanged.connect(self._field_edited)
 
         self._preset_changed(self.preset_combo.currentText())
         self._silent = False
@@ -716,8 +970,13 @@ class MainWindow(QMainWindow):
         self.in_j_sites.setText(cfg["j_sites"]);self.in_V_sites.setText(cfg["V_sites"])
         self.in_a_lo.setText(cfg["interval_lo"]);self.in_b_hi.setText(cfg["interval_hi"])
         self.in_E0.setText(cfg["E0"]);          self.in_sigma_E.setText(cfg["sigma_E"])
-        self.in_n_t.setText(cfg["n_t"]);        self.in_t_max.setText(cfg["t_max"])
-        self.in_n_quad.setText(cfg["n_quad"])
+        # presets store the short mode name; match the full combo label
+        self.in_sigma_mode.setCurrentText(
+            next(k for k in SIGMA_MODES if k.startswith(cfg["sigma_mode"]))
+        )
+        self.in_n_init.setText(cfg["n_init"])
+        self.in_n_t.setText(cfg["n_t"]);        self.in_t_min.setText(cfg["t_min"])
+        self.in_t_max.setText(cfg["t_max"]);    self.in_n_quad.setText(cfg["n_quad"])
         self.in_outer.setCurrentText("+" if cfg["outer"] == "+" else "−")
         self._silent = False
         self.status_label.setText("")
@@ -741,6 +1000,22 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             self.status_label.setText(f"Input error:  {exc}")
             return
+
+        # Advisory aliasing check (single-interval runs only; the per-window
+        # Schober presets use narrow segments and are far below threshold).
+        # Under-resolved quadrature folds a phantom mirror packet into psi --
+        # the t=0 frame looks fine, the waterfall doubles its mass.
+        self._nquad_warning = ""
+        if spec.E_segments is None:
+            recommended = min_nquad(
+                spec.N, spec.M, float(spec.times[0]), float(spec.times[-1]),
+                spec.interval[0], spec.interval[1], spec.a,
+            )
+            if spec.n_quad < recommended:
+                self._nquad_warning = (
+                    f"   ⚠ n_quad={spec.n_quad} may alias "
+                    f"(phantom mirror packet); recommend ≥ {recommended}"
+                )
 
         # ---- tear down any in-flight playback / compute ----
         self.timer.stop()
@@ -770,12 +1045,13 @@ class MainWindow(QMainWindow):
         self.run_button.setEnabled(False)
         self.play_btn.setEnabled(False)
         self.restart_btn.setEnabled(False)
+        self.export_btn.setEnabled(False)
         self.scrubber.setEnabled(False)
         self.scrubber.blockSignals(True)
         self.scrubber.setRange(0, 0)
         self.scrubber.setValue(0)
         self.scrubber.blockSignals(False)
-        self.status_label.setText("Computing…")
+        self.status_label.setText("Computing…" + self._nquad_warning)
         self.line = None
         self.fill = None
         self.water_image = None
@@ -845,7 +1121,7 @@ class MainWindow(QMainWindow):
         self.progress_bar.setValue(100)
         self.status_label.setText(
             f"{len(frames)} frames · {self.lattice.size} sites · "
-            f"max ψ = {gmax:.4g}"
+            f"max ψ = {gmax:.4g}" + self._nquad_warning
         )
         self.stat_max.setText(f"{gmax:.4f}")
 
@@ -860,6 +1136,7 @@ class MainWindow(QMainWindow):
         self.scrubber.setEnabled(True)
         self.play_btn.setEnabled(True)
         self.restart_btn.setEnabled(True)
+        self.export_btn.setEnabled(True)
 
         # Auto-play
         self.play_btn.setText("⏸")
@@ -911,6 +1188,54 @@ class MainWindow(QMainWindow):
         except ValueError:
             mult = 1.0
         return max(4, int(round(33 / mult)))
+
+    # ----------------------------------------------------------------- export
+    def _export_clicked(self):
+        if self.frames is None:
+            return
+        have_ffmpeg = shutil.which("ffmpeg") is not None
+        if have_ffmpeg:
+            default_name, name_filter = "maxwell.mp4", "MP4 video (*.mp4)"
+        else:
+            default_name, name_filter = "maxwell.gif", "GIF animation (*.gif)"
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export animation", default_name, name_filter
+        )
+        if not path:
+            return
+
+        self.export_btn.setEnabled(False)
+        self.progress_bar.setValue(0)
+        self.status_label.setText("Exporting…")
+
+        worker = ExportWorker(
+            frames=self.frames,
+            lattice=self.lattice,
+            times=self.times,
+            j_sites=self._j_sites_for_render,
+            gmax=self.gmax,
+            ylim=self.ylim,
+            path=path,
+            use_ffmpeg=have_ffmpeg,
+        )
+        self._inflight_workers.append(worker)
+        worker.progress.connect(self.progress_bar.setValue)
+        worker.done.connect(self._on_export_done)
+        worker.failed.connect(self._on_export_failed)
+        worker.start()
+
+    def _on_export_done(self, path: str):
+        self._inflight_workers = [w for w in self._inflight_workers if w.isRunning()]
+        self.progress_bar.setValue(100)
+        self.status_label.setText(f"Export saved:  {path}")
+        # Only re-enable if there is still an animation to export (a compute
+        # may have started, and cleared frames, while we were writing).
+        self.export_btn.setEnabled(self.frames is not None)
+
+    def _on_export_failed(self, msg: str):
+        self._inflight_workers = [w for w in self._inflight_workers if w.isRunning()]
+        self.status_label.setText(f"Export failed:  {msg}")
+        self.export_btn.setEnabled(self.frames is not None)
 
     # ----------------------------------------------------------------- rendering
     def _render_waterfall(self):
@@ -1084,25 +1409,44 @@ class MainWindow(QMainWindow):
         b_hi    = float(self.in_b_hi.text())
         E0      = float(self.in_E0.text())
         sigma_E = float(self.in_sigma_E.text())
+        n_init  = int(self.in_n_init.text())
         n_t     = int(self.in_n_t.text())
+        t_min   = float(self.in_t_min.text())
         t_max   = float(self.in_t_max.text())
         n_quad  = int(self.in_n_quad.text())
         outer   = +1 if self.in_outer.currentText() == "+" else -1
+        h_plus, h_minus = SIGMA_MODES[self.in_sigma_mode.currentText()]
+        if t_min >= t_max:
+            raise ValueError("need t_min < t_max")
 
-        def f(E):
-            E = np.asarray(E, dtype=float)
-            env = np.exp(-((E - E0) ** 2) / (2.0 * sigma_E ** 2))
-            out = np.zeros((E.size, L, 2), dtype=complex)
-            out[:, 0, 0] = env
-            return out
+        # Schober window presets carry a fixed step-function f (keyed by preset
+        # name); every other preset / Custom builds the Gaussian f from the form.
+        window_f = PRESET_F.get(self.preset_combo.currentText())
+        if window_f is not None:
+            f = window_f
+        else:
+            # Gaussian f (memo B.1): sigma-mode weights h± scale the two σ
+            # channels, and the θ(E) phase parks the packet at lattice site
+            # n_init at t=0. Single channel l₀=0; other channels stay zero.
+            a0 = float(a[0])
+
+            def f(E):
+                E = np.asarray(E, dtype=float)
+                env = np.exp(-((E - E0) ** 2) / (2.0 * sigma_E ** 2))
+                theta = np.arccos(np.clip(E / (2.0 * a0), -1.0, 1.0))
+                out = np.zeros((E.size, L, 2), dtype=complex)
+                out[:, 0, 0] = h_plus  * env * np.exp(+1j * n_init * theta)
+                out[:, 0, 1] = h_minus * env * np.exp(-1j * n_init * theta)
+                return out
 
         spec = MaxwellSpec(
             L=L, a=a, N=N, M=M,
             j_sites=j_sites, V_sites=V_sites,
             interval=(a_lo, b_hi),
             f=f,
-            times=np.linspace(0.0, t_max, n_t),
+            times=np.linspace(t_min, t_max, n_t),
             n_quad=n_quad,
+            E_segments=PRESET_SEGMENTS.get(self.preset_combo.currentText()),
             outer_sign=outer,
         )
         spec.validate()

@@ -20,7 +20,12 @@ from .eigfunc import full_eigenfunctions
 from .green import compute_greens
 from .jost import compute_jost
 from .model import MaxwellSpec
-from .quadrature import gauss_legendre, safe_open_band_interval
+from .quadrature import (
+    gauss_legendre,
+    gauss_legendre_segments,
+    safe_open_band_interval,
+    safe_open_band_segments,
+)
 from .wronskian import compute_wronskians
 
 
@@ -38,8 +43,14 @@ def compute_psi(spec: MaxwellSpec) -> np.ndarray:
     lattice = spec.lattice()
 
     a_min = float(a[-1])
-    lo, hi = safe_open_band_interval(a_min, spec.interval, spec.threshold_buffer)
-    E_nodes, E_weights = gauss_legendre(lo, hi, spec.n_quad)
+    if spec.E_segments is not None:
+        # Memo item B.5: one GL rule per [c, d] window converges spectrally
+        # where a single rule spanning the f discontinuities does not.
+        segs = safe_open_band_segments(a_min, spec.E_segments, spec.threshold_buffer)
+        E_nodes, E_weights = gauss_legendre_segments(segs, spec.n_quad)
+    else:
+        lo, hi = safe_open_band_interval(a_min, spec.interval, spec.threshold_buffer)
+        E_nodes, E_weights = gauss_legendre(lo, hi, spec.n_quad)
 
     Z = channel_momenta(E_nodes, a)                       # (n_E, L)
     nu = density_of_states(Z, a)                          # (n_E, L)
@@ -48,14 +59,18 @@ def compute_psi(spec: MaxwellSpec) -> np.ndarray:
     f_vals = spec.evaluate_f(E_nodes)                     # (n_E, L, 2)
 
     if K == 0:
-        # Free case: w_{l,sigma}^{E,outer}(n) = z_l^{-outer * n} e_l, sigma-independent.
+        # Free case (Interpretation 2, Schober A.1): w^{E,sigma}_{l}(n) = z_l^{-sigma n} e_l.
+        # The summed sigma is the wave-vector sign, so the two sigma entries are the
+        # distinct generalized eigenvectors z^{-n} and z^{+n} (no potential, so the
+        # fixed outer/branch index drops out).
         n_E = E_nodes.size
         n_sites = lattice.shape[0]
-        free_diag = Z[:, None, :] ** (-spec.outer_sign * lattice[None, :, None].astype(float))
-        w_free = np.zeros((n_E, L, n_sites, L), dtype=complex)
-        for l in range(L):
-            w_free[:, l, :, l] = free_diag[:, :, l]
-        w = np.stack([w_free, w_free], axis=0)            # (2_sigma, n_E, L, n_sites, L)
+        sigma_vals = np.array([+1.0, -1.0])
+        w = np.zeros((2, n_E, L, n_sites, L), dtype=complex)  # (2_sigma, n_E, L, n_sites, L)
+        for sidx, sgn in enumerate(sigma_vals):
+            free_diag = Z[:, None, :] ** (-sgn * lattice[None, :, None].astype(float))
+            for l in range(L):
+                w[sidx, :, l, :, l] = free_diag[:, :, l]
     else:
         bundle = compute_jost(Z, a, spec.j_sites, spec.V_sites, lattice)
         # Anchor at the leftmost lattice site -- u_-(N) = phi^{-sigma}(N) by construction.

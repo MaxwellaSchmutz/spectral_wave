@@ -1,13 +1,15 @@
-"""Step 5 of MaxwellAlgorithm.pdf, implemented verbatim.
+"""Step 5 of the Maxwell algorithm.
 
-For n in Z intersect [N, M] and E in [a, b], the spec says:
+For n in Z intersect [N, M] and E in (-2 a_L, 2 a_L):
 
-    u_+^{E, +-}(n) = phi^{+-}(n, E) +- sum_{k: j_k > n} s(n, k, E) V(j_k) u_+^{E, +-}(j_k)
-    u_-^{E, +-}(n) = phi^{-+}(n, E) -+ sum_{k: j_k < n} s(n, k, E) V(j_k) u_-^{E, +-}(j_k)
+    u_+^{E, +-}(n) = phi^{+-}(n, E) + i sum_{k: j_k > n} s(n, k, E) V(j_k) u_+^{E, +-}(j_k)
+    u_-^{E, +-}(n) = phi^{-+}(n, E) - i sum_{k: j_k < n} s(n, k, E) V(j_k) u_-^{E, +-}(j_k)
 
-with the +- in the prefactor matching the +- superscript on u_+ (and the
-prefactor of u_- being the opposite sign of the superscript on u_-). Each
-u_tau^{E, sigma}(n) is an L x L matrix.
+The sum prefactor is +i for u_+ and -i for u_-, INDEPENDENT of the sigma
+superscript -- the sign depends only on the lower (+/-) index. Schober confirmed
+this (A.2): the literal real, sigma-dependent +/- prefactor gives residual
+(H u)(0) - E u(0) = 0.5(1 + sigma*i) at L=1, V(0)=0.5, E=0; the +i/-i prefactor
+zeroes it. Each u_tau^{E, sigma}(n) is an L x L matrix.
 
 The recursion is one-sided: u_+ at n only references u_+ at potential
 sites strictly to the right of n. We therefore walk leftward, processing
@@ -75,14 +77,12 @@ def compute_jost(
     j_to_lat = (j_sites - int(lattice[0])).astype(int)
     j_set = set(int(j) for j in j_sites)
 
-    # Spec prefactors:
-    #   u_+^{E, sigma}: +sigma on the sum (sigma = +1 -> +1, sigma = -1 -> -1).
-    #   u_-^{E, sigma}: -sigma on the sum (sigma = +1 -> -1, sigma = -1 -> +1).
-    sigma_signs = np.array([+1.0, -1.0])
+    # Sum prefactor (Schober A.2): +i on the u_+ sum and -i on the u_- sum,
+    # INDEPENDENT of sigma. The sign tracks the lower (+/-) index only.
+    sgn_plus  = +1j
+    sgn_minus = -1j
 
     for sigma_idx in range(2):
-        sgn_plus  = +sigma_signs[sigma_idx]
-        sgn_minus = -sigma_signs[sigma_idx]
 
         # ---------- u_+^{E, sigma}: walk leftward ----------
         # Step A: fill u_+ at potential sites in reverse k order (so the sum

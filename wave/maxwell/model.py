@@ -31,6 +31,11 @@ class MaxwellSpec:
     f: Callable[[np.ndarray], np.ndarray]
     times: np.ndarray
     n_quad: int = 128
+    # Optional list of disjoint energy windows [c, d] for composite quadrature
+    # (author memo, item B.5). When set, steps 9-10 integrate each segment with
+    # its own Gauss-Legendre rule instead of one rule over ``interval``, which
+    # converges spectrally for window-type f. When None, ``interval`` is used.
+    E_segments: list[tuple[float, float]] | None = None
     threshold_buffer: float = DEFAULT_THRESHOLD_BUFFER
     # Which sign convention to use for the outer w_{l,sigma}^{E,pm} in step 10.
     # +1 selects w^{E,+} (outgoing F_+ branch); -1 selects w^{E,-}. See open
@@ -45,6 +50,8 @@ class MaxwellSpec:
             self.V_sites = np.zeros((0, self.L, self.L), dtype=complex)
         self.times = np.asarray(self.times, dtype=float).reshape(-1)
         self.interval = (float(self.interval[0]), float(self.interval[1]))
+        if self.E_segments is not None:
+            self.E_segments = [(float(lo), float(hi)) for lo, hi in self.E_segments]
 
     # ------------------------------------------------------------------ #
     # Validation                                                         #
@@ -94,6 +101,32 @@ class MaxwellSpec:
                 f"Outside this range some channels are closed and the "
                 f"Maxwell algorithm formulas break down."
             )
+
+        if self.E_segments is not None:
+            if len(self.E_segments) == 0:
+                raise ValueError("E_segments must be non-empty when given")
+            for i, (lo, hi) in enumerate(self.E_segments):
+                if lo >= hi:
+                    raise ValueError(
+                        f"E_segments[{i}] must satisfy lo < hi, got ({lo}, {hi})"
+                    )
+                if lo < -thresh or hi > thresh:
+                    raise ValueError(
+                        f"E_segments[{i}] = ({lo}, {hi}) must lie inside the "
+                        f"common open band [{-thresh}, {thresh}] "
+                        f"(a_min={a_min}, "
+                        f"threshold_buffer={self.threshold_buffer}). "
+                        f"Outside this range some channels are closed and the "
+                        f"Maxwell algorithm formulas break down."
+                    )
+            for i in range(len(self.E_segments) - 1):
+                if self.E_segments[i][1] > self.E_segments[i + 1][0]:
+                    raise ValueError(
+                        f"E_segments must be strictly ordered and "
+                        f"non-overlapping (seg[i][1] <= seg[i+1][0]): segments "
+                        f"{i} and {i + 1} are {self.E_segments[i]} and "
+                        f"{self.E_segments[i + 1]}"
+                    )
 
         if self.n_quad < 8:
             raise ValueError("n_quad must be >= 8 for stable Gauss-Legendre")
