@@ -37,6 +37,15 @@ def full_eigenfunctions(
     G_grid     : (2, n_E, n_sites, K, L, L) -- both branch Green's functions
                  stacked along axis 0 as [branch=+, branch=-]. Only the branch
                  selected by ``outer_sign`` is used.
+
+                 NOTE the producer, green.py, labels this same axis as sigma
+                 (it loops sigma_idx, pairing u_+[sigma] with u_-[-sigma]).
+                 The two readings coincide only if the sigma of paper 2's
+                 G^{K}_{E,sigma} really is the +/- i0 boundary label. This is
+                 the seam the open A.12 question sits on -- see docs/AUDIT.md
+                 sections 1-4. Do not "fix" the axis meaning without a ruling:
+                 both branches are exact, norm-preserving eigenbases, and the
+                 test suite pins both outer_sign values as passing.
     lattice    : (n_sites,)
     outer_sign : +1 or -1 -- the fixed lower (+/-) index; selects the branch.
 

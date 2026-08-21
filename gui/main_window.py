@@ -53,8 +53,6 @@ ACCENT    = "#7d6cff"   # electric purple
 ACCENT_HV = "#9485ff"
 ACCENT2   = "#4cc9f0"   # cyan — wave-packet line
 SUCCESS   = "#06d6a0"   # mint — progress
-WARN      = "#ffd166"
-DANGER    = "#ff6b8a"
 
 
 STYLESHEET = f"""
@@ -182,14 +180,6 @@ QPushButton {{
 QPushButton:hover    {{ background-color: {ACCENT_HV}; }}
 QPushButton:pressed  {{ background-color: #6856e6; }}
 QPushButton:disabled {{ background-color: #2c2c40; color: #5a5a72; }}
-
-QPushButton#secondary {{
-    background-color: transparent;
-    border: 1px solid {BORDER};
-    color: {TEXT_PRIM};
-}}
-QPushButton#secondary:hover    {{ border-color: {ACCENT}; color: {ACCENT}; }}
-QPushButton#secondary:disabled {{ border-color: #2a2a3a; color: #5a5a72; }}
 
 QPushButton#icon {{
     background-color: {BG_INPUT};

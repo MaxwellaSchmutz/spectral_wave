@@ -1,4 +1,4 @@
-﻿"""Composite quadrature over energy windows (memo item B.5).
+"""Composite quadrature over energy windows (memo item B.5).
 
 B.5 is Maxwell's own numerics, not spec territory -- no Schober sign-off
 needed, but the behavior is contractual for the GUI presets: window-type

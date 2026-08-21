@@ -1,4 +1,4 @@
-﻿"""Regression suite for the Maxwell algorithm reference implementation.
+"""Regression suite for the Maxwell algorithm reference implementation.
 
 Rebuilt 2026-07 after the disk failure; same policy as the lost original.
 
@@ -331,7 +331,7 @@ def test_greens_branch_formulas_agree_at_support(name):
 
 
 # ===================================================================== #
-# 6. Step 8: the A.10 PIN -- the loud one                                #
+# 6. Step 8: the A.10 residual -- the only check that catches the sign   #
 # ===================================================================== #
 
 @pytest.mark.parametrize("name", list(CONFIGS))
@@ -369,7 +369,7 @@ def test_step8_residual_A10(name, outer_sign):
 
 
 # ===================================================================== #
-# 7. Steps 9-10: the A.11 PIN -- total probability is 2*pi               #
+# 7. Steps 9-10: A.11 -- total probability is 1                          #
 # ===================================================================== #
 
 def test_total_probability_A11():

@@ -1,6 +1,7 @@
-"""GUI adapter: render Maxwell-algorithm output in the same shape that
-SpectralSystem.compute_frames produces, so MainWindow needs no changes
-downstream.
+"""GUI adapter: turn a MaxwellSpec into the frame list the viewer animates.
+
+The only bridge between the algorithm and gui/. Nothing here does physics --
+compute_psi does that; this reshapes the result and reports coarse progress.
 """
 
 from __future__ import annotations
@@ -17,12 +18,19 @@ def maxwell_to_frames(
     spec: MaxwellSpec,
     progress_callback: Optional[Callable[[int], None]] = None,
 ) -> tuple[list[list[np.ndarray]], float]:
-    """Compute psi(n, t) and return (frames, global_max) compatible with
-    ComputeWorker.finished signal in gui/main_window.py.
+    """Compute psi(n, t) and return (frames, global_max).
 
-    Each frame is a single-curve list -- the absolute value of the wave
-    packet density at lattice sites. The MainWindow plots curves with x =
-    spec.lattice() in the GUI; pass that lattice as x_values when wiring.
+    This is what MaxwellWorker.finished carries (gui/main_window.py:507).
+    frames[t] is a one-element list holding psi at time t -- a row view into
+    the single (n_t, n_sites) array, not a copy. The one-element nesting is
+    the shape MainWindow's plotting code expects; x values come from
+    spec.lattice(), which the GUI stores separately as self.lattice.
+
+    psi is already a non-negative density, so global_max needs no abs().
+
+    progress_callback, if given, receives 5 / 95 / 100 -- coarse enough that
+    the GUI's progress bar is effectively a three-state indicator. Threading
+    real progress would mean reaching into compute_psi's energy loop.
     """
     if progress_callback is not None:
         progress_callback(5)

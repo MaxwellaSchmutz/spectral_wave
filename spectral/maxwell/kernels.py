@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from .channels import density_of_states
+
 
 def s_kernel_diag(
     Z: np.ndarray,
@@ -26,7 +28,7 @@ def s_kernel_diag(
     j_sites = np.asarray(j_sites, dtype=int).reshape(-1)
     lattice = np.asarray(lattice, dtype=int).reshape(-1)
 
-    nu = 1.0 / (2.0 * a[None, :] * np.imag(Z))                    # (n_E, L)
+    nu = density_of_states(Z, a)                                  # (n_E, L), step 3
     exponent = (j_sites[None, :] - lattice[:, None]).astype(float)  # (n_sites, K)
 
     Zb = Z[:, None, None, :]                                       # (n_E, 1, 1, L)

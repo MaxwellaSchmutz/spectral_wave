@@ -112,11 +112,3 @@ def compute_psi(spec: MaxwellSpec) -> np.ndarray:
     # \psi by 2\pi." So step 9's p is left literal and the 2*pi is divided
     # out here, at the end of step 10.
     return psi / (p * 2.0 * np.pi)
-
-
-def compute_psi_frames(spec: MaxwellSpec) -> tuple[list[list[np.ndarray]], float]:
-    """Render psi in the GUI's compute_frames shape."""
-    psi = compute_psi(spec)
-    global_max = float(np.max(psi))
-    frames = [[psi[t]] for t in range(psi.shape[0])]
-    return frames, global_max
