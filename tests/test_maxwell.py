@@ -295,12 +295,14 @@ def test_greens_branch_formulas_agree_at_support(name):
         u_+^{sigma}(j_k) (W_+^{sigma})^{-1} u_-^{-sigma}(j_k)^H
         == - u_-^{sigma}(j_k) (W_-^{sigma})^{-1} u_+^{-sigma}(j_k)^H
 
-    Spec reading, verbatim: branch n > j_k uses W_+ with u_+(n) and
-    u_-^{-sigma}(j_k)^*; branch n <= j_k uses -u_-(n) W_-^{-1}
-    u_+^{-sigma}(j_k)^*. Here the n > j_k FORMULA is evaluated at
-    n = j_k and compared to the n <= j_k formula there. NOTE this check
-    passing says nothing about the overall sign of G -- see the A.10 pin
-    in test 6, which his diagnostics cannot see.
+    Both branch formulas are written here with paper 2's -/+ sign pattern
+    (A.10, Schober ruling 2026-08): branch n > j_k is -u_+(n) W_+^{-1}
+    u_-^{-sigma}(j_k)^*, branch n <= j_k is +u_-(n) W_-^{-1}
+    u_+^{-sigma}(j_k)^*. The n > j_k FORMULA is evaluated at n = j_k and
+    compared to the n <= j_k formula there. NOTE this check is insensitive
+    to an overall sign of G -- it passed just as well before the A.10 fix,
+    which is why it could not catch it. Test 6 is the residual check that
+    can.
     """
     p = pipeline(name)
     L = p.L
@@ -316,8 +318,8 @@ def test_greens_branch_formulas_agree_at_support(name):
             u_m_other_H = np.conj(np.swapaxes(p.bundle.u_minus[other][:, ji], -1, -2))
             u_p_other_H = np.conj(np.swapaxes(p.bundle.u_plus[other][:, ji], -1, -2))
 
-            expr_plus = np.einsum("Eab,Ebc,Ecd->Ead", u_p, W_plus_inv, u_m_other_H)
-            expr_minus = -np.einsum("Eab,Ebc,Ecd->Ead", u_m, W_minus_inv, u_p_other_H)
+            expr_plus = -np.einsum("Eab,Ebc,Ecd->Ead", u_p, W_plus_inv, u_m_other_H)
+            expr_minus = np.einsum("Eab,Ebc,Ecd->Ead", u_m, W_minus_inv, u_p_other_H)
             np.testing.assert_allclose(expr_plus, expr_minus, rtol=0.0, atol=1e-10)
 
             # Convention pin: at n = j_k the code's mask (lattice > j_k)
@@ -333,32 +335,27 @@ def test_greens_branch_formulas_agree_at_support(name):
 
 @pytest.mark.parametrize("name", list(CONFIGS))
 @pytest.mark.parametrize("outer_sign", [+1, -1])
-def test_step8_residual_pin_A10(name, outer_sign):
-    """PIN A.10 -- OPEN. DO NOT 'fix' without Schober's blessing.
+def test_step8_residual_A10(name, outer_sign):
+    """A.10 -- RESOLVED (Schober ruling 2026-08). The composed step-8 w is
+    an honest generalized eigenfunction EVERYWHERE:
 
-    WHAT THIS PINS: with honest Jost u's (test 3), the literal step-7 G
-    composed into the literal step-8 w gives
-
-        (H - E) w = 2 V(j_k) z_l^{-sigma j_k} e_l   exactly AT each j_k,
-        (H - E) w ~ 1e-15                           everywhere else,
+        (H - E) w = 0   at every interior site, support included,
 
     for BOTH outer_sign branches and BOTH summed sigma.
 
-    WHY: literal step-7 G is (E - H)^{-1} (it satisfies (E - H) G = delta),
-    so step 8's w = phi - G V phi has (H - E) w = V phi + V phi = 2 V phi
-    at the support -- the minus sign double-counts the potential. Steps 7
-    and 8 are off by one overall sign, factor exactly 2, no other damage.
-    Schober's own endorsed diagnostics (A.4 anchor independence, A.5
-    branch agreement -- tests 4 and 5) pass REGARDLESS, so they cannot
-    catch this. This pin is the only tripwire.
+    HISTORY: the literal spec's step-7 G was (E - H)^{-1}, so step 8's
+    w = phi - G V phi left (H - E) w = 2 V(j_k) z_l^{-sigma j_k} e_l at
+    each support site -- the minus double-counted the potential. Schober's
+    own endorsed diagnostics (A.4 anchor independence, A.5 branch
+    agreement -- tests 4 and 5) are insensitive to an overall sign of G
+    and passed regardless; this residual was the only tripwire.
 
-    THE TWO EQUIVALENT ONE-LINE FIXES, when (and only when) he rules:
-      (a) negate G in wave/maxwell/green.py, or
-      (b) flip the step-8 minus to plus in wave/maxwell/eigfunc.py.
-    Either one turns the support residual into 0; then flip this pin to
-    assert max |(H - E) w| < 1e-12 EVERYWHERE and delete the 2 V phi
-    block. Until then the literal behavior is the contract. Awaiting
-    Schober.
+    His ruling, verbatim: "What I know for sure is that (H-E)w = 0 has to
+    be true. So if you are saying that changes the sign of G accomplishes
+    that, please change the sign. I don't think we should change the sign
+    in front of the sum." The branch signs in green.py were flipped to
+    paper 2's -/+ pattern; eigfunc.py's step-8 minus is unchanged.
+    Measured max |(H - E) w| went from 2|V| (1.6 at V = 0.8) to ~6e-16.
     """
     p = pipeline(name)
     w = full_eigenfunctions(
@@ -367,48 +364,29 @@ def test_step8_residual_pin_A10(name, outer_sign):
     )  # (2_sigma, n_E, L_chan, n_sites, L_comp)
 
     res = h_residual_vector_grid(w, p.a, p.Vmap, p.lattice, p.E)
-    interior = p.lattice[1:-1]
-    on_support = np.isin(interior, p.j_sites)
-
-    # Off the support the composed w is an eigenfunction to machine noise.
-    assert np.max(np.abs(res[..., ~on_support, :])) < TOL
-
-    # AT the support: residual == 2 V(j_k) z_l^{-sigma j_k} e_l, componentwise.
-    sigma_vals = np.array([+1.0, -1.0])
-    for k, jk in enumerate(p.j_sites):
-        pos = int(np.flatnonzero(interior == jk)[0])
-        got = res[..., pos, :]                                  # (2, n_E, L_chan, L_comp)
-        phase = p.Z[None, :, :] ** (-sigma_vals[:, None, None] * float(jk))
-        # expected[s, E, l, :] = 2 z_l^{-sigma j_k} V(j_k)[:, l]
-        expected = 2.0 * phase[..., None] * p.V_sites[k].T[None, None, :, :]
-        np.testing.assert_allclose(got, expected, rtol=0.0, atol=1e-9)
-
-    # Loudness guard: the support residual is O(1) -- if someone applies
-    # fix (a) or (b) above, this line fails too and points them here.
-    assert np.max(np.abs(res[..., on_support, :])) > 0.1
+    assert np.max(np.abs(res)) < TOL
 
 
 # ===================================================================== #
 # 7. Steps 9-10: the A.11 PIN -- total probability is 2*pi               #
 # ===================================================================== #
 
-def test_total_probability_pin_A11():
-    """PIN A.11 -- OPEN. DO NOT 'fix' without Schober's blessing.
+def test_total_probability_A11():
+    """A.11 -- RESOLVED (Schober ruling 2026-08). Total probability is 1:
 
-    WHAT THIS PINS: with the literal step-9 normaliser
-    p = sum_{l,sigma} int |f|^2 dE, the total probability comes out
+        sum_n psi(n, 0) = 1
 
-        sum_n psi(n, 0) = 2*pi   exactly (Parseval on the circle),
+    HISTORY: with the literal step-9 normaliser p = sum_{l,sigma}
+    int |f|^2 dE the total came out to exactly 2*pi (Parseval on the
+    circle -- the lattice sum gives sum_n e^{-in(theta-theta')} =
+    2 pi delta(theta - theta') and nothing downstream removed it).
 
-    not 1. A 1/(2*pi) is missing from the completeness measure. This
-    contradicts Schober's A.8 answer ("psi is the density, total is 1,
-    normalize once at the beginning") -- but A.8 was about WHERE to
-    normalize, not the constant, so the literal 2*pi stays in the code
-    until he rules on the constant itself.
-
-    THE ONE-LINE FIX, when he rules: divide p (or psi) by 2*pi in
-    wave/maxwell/evolve.py step 9; then flip this pin to
-    |sum_n psi - 1| < 1e-6. Awaiting Schober.
+    His ruling, verbatim: "Yes, the probability is off by a factor 2\\pi!
+    [...] Don't change p, just devide the final function \\psi by 2\\pi."
+    So step 9's p is left literal and evolve.py divides psi by 2*pi at the
+    end of step 10. He also confirmed the reading of the normalisation
+    itself: "Yes, Sigma_n psi(n,t) = 1 not Sigma|psi|^2 = 1" -- psi
+    already carries the |.|^2.
 
     Config: free scalar Gaussian, sigma=+ only, E0 = 0, sE = 0.30, slab
     wide enough (+-150) that the lattice truncation error is ~1e-14.
@@ -418,10 +396,7 @@ def test_total_probability_pin_A11():
     psi = compute_psi(spec)
     total = float(psi[0].sum())
 
-    assert abs(total - 2.0 * np.pi) < 1e-6      # measured: |diff| ~ 9e-13
-
-    # Loudness guard: anyone silently renormalising to 1 trips this line.
-    assert abs(total - 1.0) > 5.0
+    assert abs(total - 1.0) < 1e-6              # measured: |diff| ~ 1.5e-13
 
 
 # ===================================================================== #

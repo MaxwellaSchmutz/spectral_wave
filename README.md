@@ -100,29 +100,65 @@ The Qt bridge that turns spec output into animation frames is
 
 ## Algorithm status
 
-The code follows the 2026-05-19 spec literally, plus exactly two fixes the
-author has blessed (2026-05-19 chat):
+The code follows the 2026-05-19 spec, plus four fixes the author has blessed
+(2026-05-19 and 2026-08 chats, the latter in `professor_response.txt`):
 
 - Step 5's sum prefactor is `+i` for `u_+` and `-i` for `u_-`, independent of
-  sigma (A.2 — the old README's open question, since confirmed). Jost
-  residuals are now ~1e-16.
+  sigma (A.2). Jost residuals are ~1e-16. This is not a deviation from the
+  theory: it reproduces paper 1's Volterra kernel `A^-1 s^{E,sigma}` exactly.
 - Step 8/10 index convention is Interpretation 2 (A.1): the summed sigma is
   the wave-vector sign driving `z^{-sigma n}`; the fixed lower `+/-` index
   (`outer_sign`) picks one Green's-function branch. Balanced packets
   (`f_+ = f_-`) stand still and change shape, per the author.
+- A.10: step 7's branch signs now follow paper 2's `-/+` pattern, so `G` is
+  `(H-E)^{-1}` and step 8 no longer double-counts the potential.
+  `max |(H-E)w|` went from `2|V|` to ~6e-16. The author's ruling put the fix
+  in `green.py`, explicitly *not* in step 8's sum: "if you are saying that
+  changes the sign of G accomplishes that, please change the sign. I don't
+  think we should change the sign in front of the sum."
+- A.11: `psi` is divided by `2*pi` at the end of step 10, so total
+  probability is 1. Step 9's `p` is left literal, per the ruling: "Don't
+  change p, just devide the final function psi by 2pi." He also confirmed the
+  reading: `sum_n psi(n,t) = 1`, not `sum |psi|^2 = 1`.
 
-Three discrepancies are OPEN, awaiting the author, and deliberately left
-literal in the code — the test suite pins them exactly so nothing changes
-silently (see `memo2_draft.md` for the full write-ups):
+Two items are OPEN.
 
-- A.10: literal step-7 `G` is `(E-H)^{-1}`, so step 8's subtraction leaves
-  `(H-E)w = 2 V phi` at the potential sites. One sign, two equivalent one-line
-  fixes; changes potential-scattering output at 100-316% of peak.
-- A.11: the literal step-9 `p` normalizes total probability to exactly `2*pi`,
-  not 1.
-- A.12: the spec never binds the lower `+/-` index on `w`, and `psi` depends
-  on it at order one for sigma-asymmetric packets:
-  `psi_-[f](n,t) = psi_+[f-swapped](n,-t)` exactly.
+**A.12 — the lower `+/-` index of `w`, and it is a live bug, not a
+convention.** The author declined to bind the index and instead made it a
+correctness test: "You should run the whole programm twice. Once with a + and
+once with a -. If everything is correct, the videos should look exactly the
+same up to computer precision. If they don't look the same, something in the
+algorithm/math is still wrong."
+
+They do not look the same. Measured `max|psi_+ - psi_-| / max|psi_+|` over
+`t` in `[-12, 12]`, `L=1`, `a=1`, one site `V(0)=0.8`, `n_quad=400`:
+
+| packet | as-is | after the A.10 fix | branch tied to sigma |
+| --- | --- | --- | --- |
+| balanced (1,1) | 1.18e-01 | 1.53e-01 | 2.64e-01 |
+| right (1,0)    | 3.94e-01 | 3.93e-01 | 3.93e-01 |
+| left (0,1)     | 2.99e-01 | 4.03e-01 | 3.93e-01 |
+
+With no potential (`K = 0`) the two branches agree to exactly `0.000e+00`. So
+the defect lives in the potential path, steps 5-8; it is independent of A.10;
+and `(H-E)w = 0` holds to ~6e-16 for every branch convention, so the residual
+check cannot see it. Tying the lower index to sigma does not fix it either.
+Likeliest seam: `green.py` produces axis 0 as the sigma label of
+`G^{E,sigma}` (from `u_+[sigma]` and `u_-[-sigma]`) while `eigfunc.py`
+consumes the same axis as the LAP branch `+/-`. Those coincide only if the
+sigma of paper 2's `G^K_{E,sigma}` really is the `+/- i0` boundary label.
+
+**Steps 1 and 3 simplifications — conjugate mismatch, unconfirmed.** The
+author offered `z_l(E) = e^{-i arccos(E/(2 a_l))}` and
+`nu_l(E) = 1/sqrt((2 a_l)^2 - E^2)`. The nu formula matches the code exactly
+(`max|diff| = 0.0`). The `z` formula is the *complex conjugate* of what the
+code computes (`max|code - prof| = 2.0`; `max|code - conj(prof)| = 2.2e-16`)
+— the code uses `e^{+i arccos}`, i.e. `Im z > 0`, the papers' `z_-`. His two
+formulas are mutually inconsistent: substituting his `z` into the code's
+`nu = 1/(2 a_l Im z_l)` gives a negative nu, contradicting his own positive
+root. Almost certainly an exponent-sign slip, but not adopted until he
+confirms — flipping that branch negates the antisymmetric `s`-kernel and
+propagates through steps 4-10.
 
 ## Tests
 
@@ -130,9 +166,12 @@ silently (see `memo2_draft.md` for the full write-ups):
 
 Thirty-plus regression tests: hand-derivations of steps 1-4, honest-Jost
 residuals (A.2), Wronskian anchor-independence (A.4), Green's-branch agreement
-at `n = j_k` (A.5), Interpretation-2 kinematics (standing wave / left / right,
-group velocity `2a`), probability conservation, the per-window quadrature, the
-spec-validation errors -- and the A.10/A.11 pins described above.
+at `n = j_k` (A.5), the step-8 eigenfunction residual (A.10, now `< 1e-12`
+everywhere), total probability `= 1` (A.11), Interpretation-2 kinematics
+(standing wave / left / right, group velocity `2a`), probability conservation,
+the per-window quadrature, and the spec-validation errors.
+
+Nothing covers A.12, and no test exercises `t < 0`.
 
 ## License
 

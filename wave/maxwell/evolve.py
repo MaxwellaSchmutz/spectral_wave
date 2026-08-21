@@ -105,7 +105,13 @@ def compute_psi(spec: MaxwellSpec) -> np.ndarray:
         amp = np.einsum('E,E,Enc->nc', ph, E_weights, integrand_E_n)
         psi[ti] = (np.abs(amp) ** 2).sum(axis=-1)
 
-    return psi / p
+    # A.11 (Schober ruling 2026-08): the literal p normalises the total to
+    # 2*pi, not 1 -- the lattice sum gives sum_n e^{-in(theta-theta')} =
+    # 2 pi delta(theta - theta'), and nothing downstream removes it. His
+    # ruling, verbatim: "Don't change p, just devide the final function
+    # \psi by 2\pi." So step 9's p is left literal and the 2*pi is divided
+    # out here, at the end of step 10.
+    return psi / (p * 2.0 * np.pi)
 
 
 def compute_psi_frames(spec: MaxwellSpec) -> tuple[list[list[np.ndarray]], float]:

@@ -1,7 +1,25 @@
 """Step 7 of the Maxwell algorithm: full-Hamiltonian Green's function.
 
-    G^{E,sigma}(n, k) =  u_+^{E, sigma}(n) (W_+^{E, sigma})^{-1} u_-^{E, -sigma}(j_k)^*    if n >  j_k
-                      = -u_-^{E, sigma}(n) (W_-^{E, sigma})^{-1} u_+^{E, -sigma}(j_k)^*    if n <= j_k
+    G^{E,sigma}(n, k) = -u_+^{E, sigma}(n) (W_+^{E, sigma})^{-1} u_-^{E, -sigma}(j_k)^*    if n >  j_k
+                      = +u_-^{E, sigma}(n) (W_-^{E, sigma})^{-1} u_+^{E, -sigma}(j_k)^*    if n <= j_k
+
+Sign convention (A.10, Schober ruling 2026-08): the branch signs are the
+`-/+` pattern of paper 2's resolvent kernel, so G is (H - E)^{-1}. The
+literal spec had them the other way round, making G = (E - H)^{-1}; step 8
+then subtracts it and double-counts the potential, leaving
+(H - E) w = 2 V(j_k) z^{-sigma j_k} e_l at each support site.
+
+Schober's ruling, verbatim: "What I know for sure is that (H-E)w = 0 has to
+be true. So if you are saying that changes the sign of G accomplishes that,
+please change the sign. I don't think we should change the sign in front of
+the sum." So the fix lands HERE and eigfunc.py's step-8 minus stays. With
+this, max |(H - E) w| drops from 2|V| to ~6e-16.
+
+Note paper 2 also carries an explicit i in both the Wronskian definition,
+W_paper = i[u(n+1)* A v(n) - u(n)* A v(n+1)], and the kernel numerator,
+G = -+ m_+- i (W_paper)^{-1} m^*. wronskian.py omits that i, so
+W_code = -i W_paper; since i (W_paper)^{-1} = W_code^{-1} the two omissions
+cancel exactly and only the branch signs above were left wrong.
 """
 
 from __future__ import annotations
@@ -48,11 +66,11 @@ def compute_greens(
             u_minus_jk_H = u_minus_at_j_H[:, k_idx]      # (n_E, L, L)
             u_plus_jk_H  = u_plus_at_j_H[:,  k_idx]
 
-            G_right = np.einsum(
+            G_right = -np.einsum(
                 'Enab,Ebc,Ecd->Enad',
                 u_plus_grid, W_plus_inv, u_minus_jk_H,
             )
-            G_left = -np.einsum(
+            G_left = np.einsum(
                 'Enab,Ebc,Ecd->Enad',
                 u_minus_grid, W_minus_inv, u_plus_jk_H,
             )
