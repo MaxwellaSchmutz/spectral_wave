@@ -34,7 +34,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-from wave.maxwell import MaxwellSpec, maxwell_to_frames
+from spectral.maxwell import MaxwellSpec, maxwell_to_frames
 
 
 # =====================================================================

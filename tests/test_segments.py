@@ -1,4 +1,4 @@
-"""Composite quadrature over energy windows (memo item B.5).
+﻿"""Composite quadrature over energy windows (memo item B.5).
 
 B.5 is Maxwell's own numerics, not spec territory -- no Schober sign-off
 needed, but the behavior is contractual for the GUI presets: window-type
@@ -12,8 +12,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from wave.maxwell import MaxwellSpec, compute_psi
-from wave.maxwell.quadrature import gauss_legendre_segments
+from spectral.maxwell import MaxwellSpec, compute_psi
+from spectral.maxwell.quadrature import gauss_legendre_segments
 
 
 def window_f(E):

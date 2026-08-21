@@ -1,0 +1,52 @@
+a lot of the hours that I am going to put in are just trying to find issues with the things that I have written so far. I am writing out a list of items I need your ruling on after feeling like I understand the program and the math enough to know that the things I have in there/you wrote in the algorithm might be wrong
+it will be a continuation of the memo I wrote for you initially in our previous conversations
+First, I think one sign is off between steps 7 and 8. If I am not mistaken, the G of
+step 7 satisfies (H−E)G = −δ — it is (E−H)⁻¹ — so the minus in step 8 double-counts: at
+every potential site (H−E)w = 2 V(j_k) z^{−σj_k} e_l exactly, and 0 everywhere else.
+(The two checks above cannot see this; both are insensitive to an overall sign of G.)
+Negating G, or writing step 8 with a plus, gives the same w either way, and then
+(H−E)w = 0 everywhere.
+
+Second, if I am not mistaken the total probability sums to 2π, not 1. In every
+potential-free case with the packet well inside the frame, Σ_n ψ(n,0) = 2π to twelve
+digits: the lattice sum produces Σ_n e^{−in(θ−θ′)} = 2π δ(θ−θ′), the √ν absorbs the
+change of variables, and what remains is exactly 2π·p. The total is then constant in t
+to 10⁻¹⁴. Should p carry a factor 1/(2π), or
+should I simply divide by the computed total at t = 0?
+
+Third, the lower ± index of w is never fixed by anything: step 10 sums over l and σ and
+integrates over E, but nothing selects the ±. And ψ depends on it, exactly via
+ψ₋[f](n,t) = ψ₊[f with f_{l,+} and f_{l,−} interchanged](n,−t) — the two choices differ
+by time reversal combined with swapping the σ-components. For the (1,0) and (0,1)
+Gaussians you asked to see, the difference is as large as ψ itself, and the t < 0 part
+of any video silently depends on the choice. Which ± do you intend — or should it be
+tied to σ, or to the sign of t? I use + for now.
+
+then a small one
+small ones. Your ψ in step 10 already contains the |·|², so I read "Σ|ψ|² = 1" as
+Σ_n ψ(n,t) = 1 — right?
+
+
+
+—————above is my texts to professor—————
+—————below is his responses—————————
+
+
+
+Hi! I have been working so much time on this the last few weeks. Sorry for not replying earlier. I'll now answer everything.
+First of all: I now have a readable version of the third paper in the series, it should be almost the final version that will get published. The third paper assumes that the functions w are already defined and picks up from there. I am currently working on making the first 2 papers readable, in which w is constructed.
+Here is the current version of the third paper:
+The whole reason why you do what you do is Theorem 3.2.5(b).
+This theorem tells you that the algorithm that you programmed diagonalizes the infinite matrix, which allows us to calculate its exponential and therefore who things behave over time.
+I'll send you the other two papers as soon as I am done.
+It is really hard, especially given that I currently have 9 projects like this in total. That's why I really want to get the papers done so I can delete at least this project from my brain-RAM.
+But no worries, you are doing grate! I am regularely surprised how much you are able to understand with very little input from me.
+Now to your questions:
+I can currently neither verify nor deny that the sign of G is wrong. This is exactly the paper I am currently working on and it will probably take a few more days/weeks until I'll completely understand it. What I know for sure is that (H-E)w = 0 has to be true. So if you are saying that changes the sign of G accomplishes that, please change the sign. I don't think we should change the sign in front of the sum.
+Yes, the probability is off by a factor 2\pi! Thank you so much! I would have never picked that up! We almost would have published a wrong result without you, so thank you so much! Don't change p, just devide the final function \psi by 2\pi.
+Yes, the lower index of the w is never specified. You should run the whole programm twice. Once with a + and once with a -. If everything is correct, the videos should look exactly the same up to computer precision. If they don't look the same, something in the algorithm/math is still wrong.
+Yes, Σ_n ψ(n,t) = 1 not Σ|ψ|² = 1.
+Thanks for all your work! Let me know if you have more questions!
+I forgot to tell you more stuff:
+Step 1 of the algorithm can be simplified: One has z_l(E) = e^{-i\arccos(E/(2a_l))}. No weird polynomials.
+Step 3 can also be simplified: One has \nu_l(E) = 1/sqrt((2a_l)^2-E^2).

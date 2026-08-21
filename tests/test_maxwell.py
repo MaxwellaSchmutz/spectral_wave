@@ -1,39 +1,40 @@
-"""Regression suite for the Maxwell algorithm reference implementation.
+﻿"""Regression suite for the Maxwell algorithm reference implementation.
 
 Rebuilt 2026-07 after the disk failure; same policy as the lost original.
 
-Policy. The code implements MaxwellAlgorithm.pdf (authoritative revision
-2026-05-19) LITERALLY, plus exactly two author-blessed deviations, and
-nothing else. Every step is re-derived by hand in this file and matched
-to about 1e-12. Spec oddities are PINNED: the assertions encode what the
-code DOES, not what anyone suspects it should do. If a pinned test fails,
-someone "fixed" the algorithm without Schober's blessing -- revert the
-change, or produce a dated ruling and flip the pin in the same commit.
+Policy. The code implements docs/MaxwellAlgorithm.pdf (April 25 2026)
+literally, plus exactly four author-blessed deviations, and nothing else.
+Every step is re-derived by hand in this file and matched to about 1e-12.
+Changing algorithm behaviour needs a dated ruling from Schober, and the
+affected assertions get updated in the same commit as the change.
 
-BLESSED deviations (in the algorithm; asserted here as correct):
+BLESSED deviations (asserted here as correct):
   A.2  step-5 sum prefactor is +i on the u_+ recursion and -i on the u_-
        recursion, independent of the sigma superscript ("the sign just
        depends on the lower index"). Jost residual drops to ~1e-16.
+       Reproduces paper 1's Volterra kernel A^-1 s^{E,sigma} exactly.
   A.1  step-8 Interpretation 2: the summed sigma (the one paired with
        f_{l,sigma} in step 10) is the wave-vector sign driving
        z^{-sigma n}; the fixed lower +/- (spec.outer_sign) picks ONE
        Green's branch. Schober: if f_{l,+} = f_{l,-} the packet "should
        not move, but just change shape".
-
-PINNED-OPEN (literal spec behavior, known wrong-looking, awaiting the
-author -- DO NOT fix in wave/ without his blessing):
-  A.10 the composed step-8 eigenfunction w satisfies
-       (H - E) w = 2 V(j_k) z_l^{-sigma j_k} e_l exactly AT the potential
-       sites, while being ~1e-15 everywhere else. Literal step-7 G is
-       (E - H)^{-1}, so step 8's minus sign double-counts the potential.
-  A.11 the literal step-9 normaliser p leaves sum_n psi(n, 0) = 2*pi
-       exactly, not 1 (a 1/(2*pi) is missing from the completeness
-       measure; contradicts his A.8 answer "total is 1").
+  A.10 step 7's branch signs follow paper 2 Def 3.1.1's -/+ pattern, so
+       G = (H - E)^{-1} and step 8 no longer double-counts the potential.
+       Ruled 2026-08; the fix is in green.py, NOT in step 8's sum.
+       max |(H - E) w| went from 2|V| to ~6e-16.
+  A.11 psi is divided by 2*pi at the end of step 10, so the total is 1.
+       Step 9's p is left literal. Ruled 2026-08.
 
 Endorsed program checks (Schober, 2026-05-19 chat): A.4 the Wronskian is
 anchor-independent; A.5 the two step-7 branch formulas agree at n = j_k.
-Both hold no matter how A.10 resolves -- his own diagnostics cannot see
-the A.10 sign, which is why it is pinned here instead.
+Note both are insensitive to an overall sign of G, which is exactly why
+they could not catch A.10 -- test 6 (the residual) is what catches it.
+
+STILL OPEN -- A.12, the lower +/- index of w. Step 10 never binds it, and
+psi depends on it at order one whenever a potential is present. Nothing in
+this file exercises it: no test here runs a packet through a non-zero
+potential, and none uses t < 0. See docs/AUDIT.md section 3, findings 1
+and 13.
 """
 
 from __future__ import annotations
@@ -44,13 +45,13 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from wave.maxwell import MaxwellSpec, compute_psi
-from wave.maxwell.channels import channel_momenta, density_of_states
-from wave.maxwell.eigfunc import full_eigenfunctions
-from wave.maxwell.green import compute_greens
-from wave.maxwell.jost import compute_jost
-from wave.maxwell.kernels import s_kernel_diag
-from wave.maxwell.wronskian import compute_wronskians
+from spectral.maxwell import MaxwellSpec, compute_psi
+from spectral.maxwell.channels import channel_momenta, density_of_states
+from spectral.maxwell.eigfunc import full_eigenfunctions
+from spectral.maxwell.green import compute_greens
+from spectral.maxwell.jost import compute_jost
+from spectral.maxwell.kernels import s_kernel_diag
+from spectral.maxwell.wronskian import compute_wronskians
 
 TOL = 1e-12
 

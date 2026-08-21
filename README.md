@@ -11,21 +11,8 @@ support. Underlying Hamiltonian:
     (H psi)(n) = A* psi(n+1) + A psi(n-1) + V(n) psi(n)
 
 with `A = diag(a_1, ..., a_L)` and `a_1 >= ... >= a_L > 0`. See
-`MaxwellAlgorithm.pdf` for the spec the code follows.
-
-## Run the executable
-
-Windows binary lives at `dist/maxwell.exe`. Double-click it, or:
-
-    .\dist\maxwell.exe
-
-It's a single self-contained file (about 60 MB). You don't need Python
-installed. First launch unpacks the bundle to a temp directory and takes a
-couple of seconds; later launches are quick. Copy the file anywhere
-(desktop, USB stick, network share) and it'll run.
-
-For Mac and Linux you have to build the binary on the target OS. PyInstaller
-doesn't cross-compile. See "Building it yourself" below.
+`docs/MaxwellAlgorithm.pdf` for the spec the code follows, and `docs/README.md`
+for what every other document in `docs/` is.
 
 ## Run from source
 
@@ -42,14 +29,20 @@ Without uv:
     pip install numpy matplotlib pyqt6
     python main.py
 
-## Building it yourself
+## Building a standalone binary
 
 PyInstaller is in the dev deps. From the repo root:
 
     uv sync
     uv run pyinstaller --noconfirm --name maxwell --windowed --onefile main.py
 
-You'll get the binary in `dist/`. Build on the OS you want to ship to.
+You'll get the binary in `dist/`, which is gitignored -- binaries are not
+committed. PyInstaller doesn't cross-compile, so build on the OS you want to
+ship to, and distribute the result as a release attachment rather than by
+committing it.
+
+The produced binary bundles no ffmpeg, so video export falls back to GIF
+unless ffmpeg is on the target machine's PATH.
 
 ## Using the viewer
 
@@ -82,9 +75,15 @@ off the UI thread). Vertical markers on both panels show where the potential
 sites sit. The four monospace stats below the controls update every frame: max
 amplitude, running L1 norm, peak lattice site, current time.
 
-## Module map
+## Layout
 
-Each algorithm step is one file under `wave/maxwell/`:
+    spectral/maxwell/     the algorithm, one file per step
+    gui/                  PyQt6 viewer
+    tests/                regression suite
+    docs/                 the spec, the papers, the correspondence, the audit
+    main.py               entry point
+
+Each algorithm step is one file under `spectral/maxwell/`:
 
 - `channels.py` — steps 1-3: `z_l(E)`, `phi^pm(n)`, `nu_l(E)`
 - `kernels.py` — step 4: the kernel `s(n, k, E)`
@@ -94,14 +93,20 @@ Each algorithm step is one file under `wave/maxwell/`:
 - `eigfunc.py` — step 8: full eigenfunctions `w_{l,sigma}^{E,pm}`
 - `evolve.py` — steps 9-10: normaliser `p` and `psi(n, t)`
 
-`MaxwellSpec` (the algorithm's "Data" block) lives in `wave/maxwell/model.py`.
+`MaxwellSpec` (the algorithm's "Data" block) lives in `spectral/maxwell/model.py`.
 The Qt bridge that turns spec output into animation frames is
-`wave/maxwell/adapter.py`.
+`spectral/maxwell/adapter.py`.
+
+Programmatic use:
+
+    from spectral.maxwell import MaxwellSpec, compute_psi
+
+    psi = compute_psi(spec)      # (n_times, n_sites) real, non-negative
 
 ## Algorithm status
 
-The code follows the 2026-05-19 spec, plus four fixes the author has blessed
-(2026-05-19 and 2026-08 chats, the latter in `professor_response.txt`):
+The code follows the April 2026 spec, plus four fixes the author has blessed
+(2026-05-19 and 2026-08 chats, the latter in `docs/professor_response.txt`):
 
 - Step 5's sum prefactor is `+i` for `u_+` and `-i` for `u_-`, independent of
   sigma (A.2). Jost residuals are ~1e-16. This is not a deviation from the
@@ -121,57 +126,54 @@ The code follows the 2026-05-19 spec, plus four fixes the author has blessed
   change p, just devide the final function psi by 2pi." He also confirmed the
   reading: `sum_n psi(n,t) = 1`, not `sum |psi|^2 = 1`.
 
-Two items are OPEN.
+One item is OPEN, and it is a question about the spec, not a defect.
 
-**A.12 — the lower `+/-` index of `w`, and it is a live bug, not a
-convention.** The author declined to bind the index and instead made it a
-correctness test: "You should run the whole programm twice. Once with a + and
-once with a -. If everything is correct, the videos should look exactly the
-same up to computer precision. If they don't look the same, something in the
-algorithm/math is still wrong."
+**A.12 — the lower `+/-` index of `w` is never bound.** Step 10 sums over `l`
+and `sigma` and integrates over `E`; nothing selects `+/-`. The author declined
+to fix a sign and made it a test instead: "run the whole programm twice, once
+with a + and once with a -. If everything is correct, the videos should look
+exactly the same up to computer precision."
 
-They do not look the same. Measured `max|psi_+ - psi_-| / max|psi_+|` over
-`t` in `[-12, 12]`, `L=1`, `a=1`, one site `V(0)=0.8`, `n_quad=400`:
+They do not, whenever a potential is present — 14% of peak for `L=1, V=0.8`,
+65% for `L=2` with complex-Hermitian `V` at two sites. But nothing is broken.
+Both branches satisfy `(H-E)w = 0` to ~6e-16 **and** `sum_n psi(n,t) = 1` to
+twelve digits at every time including `t < 0`, so both are exact,
+norm-preserving eigenbases. They differ by the on-shell scattering matrix
+`S_E`, which is unitary to 1e-15 with `|det| = 1` — so `F_- = (int S_E dE) F_+`
+forces `psi_-[f] = psi_+[S_E^-1 f]`, and the two runs can only coincide when
+`S_E = 1`, i.e. `V = 0`. Which is exactly what happens: with no potential they
+agree to `0.000e+00`.
 
-| packet | as-is | after the A.10 fix | branch tied to sigma |
-| --- | --- | --- | --- |
-| balanced (1,1) | 1.18e-01 | 1.53e-01 | 2.64e-01 |
-| right (1,0)    | 3.94e-01 | 3.93e-01 | 3.93e-01 |
-| left (0,1)     | 2.99e-01 | 4.03e-01 | 3.93e-01 |
+So the real question is what `f` is. Data item (f) of the spec says
+"Functions `f_{l,sigma}: [a,b] -> C`" — fixed data, independent of `+/-`. Under
+that reading the branches are *supposed* to differ. If instead the input were a
+state `psi_0` with `f := F_+- psi_0`, then `F^* F = P_ac(H)` is
+branch-independent and the test becomes a theorem — implemented and measured at
+`4.3e-15`. Awaiting the author's ruling on which he intends. See
+`docs/AUDIT.md` §1-§4.
 
-With no potential (`K = 0`) the two branches agree to exactly `0.000e+00`. So
-the defect lives in the potential path, steps 5-8; it is independent of A.10;
-and `(H-E)w = 0` holds to ~6e-16 for every branch convention, so the residual
-check cannot see it. Tying the lower index to sigma does not fix it either.
-Likeliest seam: `green.py` produces axis 0 as the sigma label of
-`G^{E,sigma}` (from `u_+[sigma]` and `u_-[-sigma]`) while `eigfunc.py`
-consumes the same axis as the LAP branch `+/-`. Those coincide only if the
-sigma of paper 2's `G^K_{E,sigma}` really is the `+/- i0` boundary label.
-
-**Steps 1 and 3 simplifications — conjugate mismatch, unconfirmed.** The
-author offered `z_l(E) = e^{-i arccos(E/(2 a_l))}` and
-`nu_l(E) = 1/sqrt((2 a_l)^2 - E^2)`. The nu formula matches the code exactly
-(`max|diff| = 0.0`). The `z` formula is the *complex conjugate* of what the
-code computes (`max|code - prof| = 2.0`; `max|code - conj(prof)| = 2.2e-16`)
-— the code uses `e^{+i arccos}`, i.e. `Im z > 0`, the papers' `z_-`. His two
-formulas are mutually inconsistent: substituting his `z` into the code's
-`nu = 1/(2 a_l Im z_l)` gives a negative nu, contradicting his own positive
-root. Almost certainly an exponent-sign slip, but not adopted until he
-confirms — flipping that branch negates the antisymmetric `s`-kernel and
-propagates through steps 4-10.
+**Resolved in passing:** the step-1 simplification in
+`docs/professor_response.txt` (`z_l = e^{-i arccos(E/(2 a_l))}`, giving
+`Im z < 0`) contradicts both his step-3 simplification and the spec, which says
+"the solution with `Im(z) > 0`". The code keeps `Im z > 0`. Do not apply that
+line literally.
 
 ## Tests
 
     uv run pytest
 
-Thirty-plus regression tests: hand-derivations of steps 1-4, honest-Jost
+Thirty-two regression tests: hand-derivations of steps 1-4, honest-Jost
 residuals (A.2), Wronskian anchor-independence (A.4), Green's-branch agreement
 at `n = j_k` (A.5), the step-8 eigenfunction residual (A.10, now `< 1e-12`
 everywhere), total probability `= 1` (A.11), Interpretation-2 kinematics
 (standing wave / left / right, group velocity `2a`), probability conservation,
 the per-window quadrature, and the spec-validation errors.
 
-Nothing covers A.12, and no test exercises `t < 0`.
+Known gaps: no test runs a packet through a non-zero potential, none uses
+`t < 0`, none sets `outer_sign`, and nothing compares against an independent
+ground truth such as a transfer-matrix transmission coefficient. `docs/AUDIT.md`
+§7 item 7 lists the four tests that would close those gaps — all four pass
+today.
 
 ## License
 

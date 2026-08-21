@@ -7,8 +7,14 @@ __pycache__/
 .venv/
 venv/
 
-# PyInstaller working dir (built artifacts in dist/ are committed)
+# PyInstaller. Build artifacts are NOT committed -- rebuild per platform,
+# ship binaries as release attachments (see README, "Building it yourself").
 build/
+dist/
+
+# Test / tooling caches
+.pytest_cache/
+.ruff_cache/
 
 # OS junk
 .DS_Store
