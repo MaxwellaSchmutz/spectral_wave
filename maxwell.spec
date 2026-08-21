@@ -1,5 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+#
+# Pinned PyInstaller build config. Build with:
+#
+#     uv run pyinstaller --noconfirm maxwell.spec
+#
+# Do NOT build with `pyinstaller ... main.py` -- that regenerates this file
+# from defaults and silently discards the settings below.
 
 a = Analysis(
     ['main.py'],
@@ -26,7 +32,9 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    # UPX is known to corrupt Qt/Python DLLs on Windows, producing a binary
+    # that fails at startup with no console to report it (console=False below).
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,

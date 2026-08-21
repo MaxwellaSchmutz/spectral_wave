@@ -31,10 +31,14 @@ Without uv:
 
 ## Building a standalone binary
 
-PyInstaller is in the dev deps. From the repo root:
+PyInstaller is in the dev deps. Build from the pinned spec, from the repo root:
 
     uv sync
-    uv run pyinstaller --noconfirm --name maxwell --windowed --onefile main.py
+    uv run pyinstaller --noconfirm maxwell.spec
+
+Build from `maxwell.spec`, not from `main.py` — passing `main.py` regenerates
+the spec from defaults and silently discards its settings, including
+`upx=False` (UPX corrupts Qt DLLs on Windows).
 
 You'll get the binary in `dist/`, which is gitignored -- binaries are not
 committed. PyInstaller doesn't cross-compile, so build on the OS you want to
