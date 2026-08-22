@@ -462,6 +462,32 @@ Once §§4–9 are done, Levinson is bookkeeping:
 5. Independently: diagonalise `H` on a big finite lattice, count eigenvalues outside the band.
 6. Compare the two integers.
 
+> **⚠ ORIENTATION — read this before using step 4 on your own pipeline.**
+>
+> Step 4 above is correct for **this guide's** `det S := conj(det W)/det W` from §7. It is
+> the WRONG SIGN for the `S_E` that `spectral/maxwell/` actually produces.
+>
+> Measured: `det S_repo(E) = conj(det S_BFNS(E))` exactly — ratio `+1.000000000` at 14
+> energies across three configurations (`L=1, A=1`; `L=2, A=1` with complex-Hermitian `V`;
+> `L=2, A=diag(1.3, 0.8)`). The reason is structural, not a bug: with `Im z > 0` and the
+> `e^{−itE}` convention, `z^n = e^{ikn}` has group velocity `dE/dk = −2a sin k < 0`, so
+> `z^n` is **left**-moving. The literature's `S` maps outgoing to incoming; yours maps
+> incoming to outgoing. Determinants are conjugates, so windings flip.
+>
+> For the repo's `S_E`, sweep `E` **downward** from `+2a_1` to `−2a_1` and use
+>
+>     W = Σ_k W_k = J_b + ½ J_h − L
+>
+> **Do not take this on faith — calibrate it once and never argue about it again.**
+> `L=1, a=1, V = 1.0` at both `n = 0` and `n = 3` gives `J_b = 2, J_h = 0, L = 1`, so
+> `|W| = 1` and the sign fixes the orientation in one line. Measured through the shipped
+> modules: `W = +1.000000000`, error `−1.08e-10`.
+>
+> See `docs/LEVINSON_PLAN.md` §2.5. Two further corrections live there: `J_b` must include
+> eigenvalues **embedded inside** the band (possible once the `a_l` differ — worked
+> counterexample at `a = (1.3, 0.4)`), and the threshold-resonance test needs `(−1)^{m_t}`,
+> not `(−1)^p`.
+
 **I verified steps 1–6 in the decoupled multi-channel case** (`A = diag(2,1)`, `V` diagonal, so it
 splits into two scalar problems), which is the sanity check you should hit first:
 

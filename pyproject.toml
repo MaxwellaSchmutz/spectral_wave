@@ -5,15 +5,19 @@ description = "Schober's matrix-valued lattice scattering algorithm with a PyQt6
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    # Bundles an ffmpeg binary, so MP4 export works without a system install.
+    # Must stay a RUNTIME dependency: it is what gui/main_window.py's
+    # _ffmpeg_available() falls back to, and in a dev-only group any normal
+    # install silently degrades video export to GIF.
+    "imageio-ffmpeg>=0.6.0",
     "matplotlib>=3.10.8",
     "numpy>=2.4.2",
-    "pillow>=11.0",     # GIF export fallback when ffmpeg is not on PATH
+    "pillow>=11.0",     # GIF export fallback
     "pyqt6>=6.10.2",
 ]
 
 [dependency-groups]
 dev = [
-    "imageio-ffmpeg>=0.6.0",
     "pyinstaller>=6.19.0",
     "pytest>=8.3",
 ]

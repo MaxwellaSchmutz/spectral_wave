@@ -136,7 +136,7 @@ going the other way, tunneling as a faint trail continuing through. Vertical
 markers show where the obstacle sits.
 
 Transport bar does play/pause, restart, scrubbing, speed (0.25x to 4x), and
-export to video — MP4 if you have ffmpeg on your PATH, GIF otherwise. The four
+export to video — MP4, or GIF if no encoder is available. The four
 readouts under the controls are max height, total probability, where the peak
 is, and the current time.
 

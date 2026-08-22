@@ -65,6 +65,26 @@ list, which matters as much as the error list. Section 2 is twelve questions rea
 into an email, each answerable in a sentence or two. Section 3 is the convention table
 across all four documents; section 4 is what could not be checked.
 
+## `LEVINSON_PLAN.md`
+
+**Start here for phase two.** The operational plan: what the Levinson integral is, exactly
+what formula applies to *this* operator, how far the code already is, and nine ordered steps
+from here to a working computation. It supersedes `LEVINSON_GUIDE.md` wherever the two
+disagree — in particular on the sign, where it has the measurement and the guide does not.
+
+Three results worth knowing before you read anything else:
+
+- **`det S_repo(E) = conj(det S_BFNS(E))`.** The repo's scattering matrix is the complex
+  conjugate of the literature's, for a structural reason (with `Im z > 0` and `e^{−itE}`,
+  `z^n` is left-moving), so windings come out with the opposite sign. Calibrate once against
+  a known case rather than trusting either convention.
+- **Eigenvalues can sit *inside* the band once the `a_l` differ.** For `A = 1` the literature
+  proves they cannot; that protection is gone here. Worked counterexample at `a = (1.3, 0.4)`.
+  A bound-state count that only looks outside the band will be wrong.
+- **Levinson appears in papers 1–3 only in the bibliographies, never in a body**, and no
+  published theorem covers this model. Schober is pointing at the gap between his own papers
+  and the literature they cite.
+
 ## `LEVINSON_GUIDE.md`
 
 The learning path for the next phase. After Schober confirmed the `S^E` result he proposed

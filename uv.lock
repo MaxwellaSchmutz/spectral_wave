@@ -302,6 +302,7 @@ name = "maxwell-algorithm"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "imageio-ffmpeg" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "pillow" },
@@ -310,13 +311,13 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "imageio-ffmpeg" },
     { name = "pyinstaller" },
     { name = "pytest" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "imageio-ffmpeg", specifier = ">=0.6.0" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "numpy", specifier = ">=2.4.2" },
     { name = "pillow", specifier = ">=11.0" },
@@ -325,7 +326,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "imageio-ffmpeg", specifier = ">=0.6.0" },
     { name = "pyinstaller", specifier = ">=6.19.0" },
     { name = "pytest", specifier = ">=8.3" },
 ]
