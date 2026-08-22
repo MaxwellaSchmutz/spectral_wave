@@ -13,6 +13,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "imageio-ffmpeg>=0.6.0",
     "pyinstaller>=6.19.0",
     "pytest>=8.3",
 ]

@@ -7,10 +7,12 @@ waterfall heatmap of psi over the full time horizon.
 
 from __future__ import annotations
 
-import shutil
 
 import numpy as np
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import (
+    QEvent, QObject, QSize, Qt, QThread, QTimer, pyqtSignal,
+)
+from PyQt6.QtGui import QColor, QFont, QGuiApplication, QPainter
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -22,6 +24,8 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QProgressBar,
     QPushButton,
+    QScrollArea,
+    QSizePolicy,
     QSlider,
     QSplitter,
     QVBoxLayout,
@@ -34,224 +38,238 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+from matplotlib import rcParams as _rc
+
 from spectral.maxwell import MaxwellSpec, maxwell_to_frames
+
+_rc.update({
+    "font.family":     "sans-serif",
+    "font.sans-serif": ["Segoe UI", "SF Pro Text", "DejaVu Sans"],
+    "font.size":       9.0,
+    "axes.titlesize":  10.5,
+    "axes.labelsize":  9.5,
+    "xtick.labelsize": 9.0,
+    "ytick.labelsize": 9.0,
+})
 
 
 # =====================================================================
 # Palette
 # =====================================================================
-BG_DEEP   = "#0f0f18"
-BG_PANEL  = "#181826"
-BG_INPUT  = "#252535"
-BG_INPUT2 = "#2d2d42"
-BG_PLOT   = "#13131e"
-BORDER    = "#36364e"
-TEXT_PRIM = "#e8e8f5"
-TEXT_DIM  = "#a4a8c4"
-TEXT_FAINT = "#7a7e98"
-ACCENT    = "#7d6cff"   # electric purple
-ACCENT_HV = "#9485ff"
-ACCENT2   = "#4cc9f0"   # cyan — wave-packet line
-SUCCESS   = "#06d6a0"   # mint — progress
+BG_DEEP     = "#0f0f18"
+BG_PANEL    = "#181826"
+BG_INPUT    = "#2c2c44"
+BG_INPUT2   = "#37375a"
+BG_PLOT     = "#13131e"
+BORDER      = "#4f4f7a"
+BORDER_SOFT = "#2e2e46"
+BORDER_HV   = "#6a6aa0"
+GRID        = "#3a3a5c"
+TEXT_PRIM   = "#ececf7"
+TEXT_DIM    = "#b4b8d1"
+TEXT_FAINT  = "#9296b0"
+ACCENT      = "#7d6cff"
+ACCENT_HV   = "#9485ff"
+ACCENT_TXT  = "#9c8fff"
+ACCENT_FILL = "#6350d6"
+ACCENT_FILL_HV = "#6d5be8"
+ACCENT_FILL_PR = "#5745c4"
+ACCENT2     = "#5fd4f5"
+SUCCESS     = "#06d6a0"
+WARN        = "#ffd166"
+ERROR       = "#ff6b81"
+DISABLED_FG = "#9292b0"
+DISABLED_BG = "#2a2a3c"
+MONO    = '"Cascadia Code", "Consolas", "SF Mono", monospace'
+SYMBOLS = '"Segoe UI Symbol", "Segoe UI", sans-serif'
+UI      = '"Segoe UI", "SF Pro Text", system-ui, sans-serif'
+INPUT_H = 40
 
 
 STYLESHEET = f"""
 * {{
-    font-family: "Segoe UI", "SF Pro Display", "Inter", system-ui, sans-serif;
+    font-family: {UI};
     font-size: 13px;
     color: {TEXT_PRIM};
 }}
 
-QMainWindow, QWidget {{
-    background-color: {BG_DEEP};
-}}
+QMainWindow, QWidget {{ background-color: {BG_DEEP}; }}
 
-QFrame#sidebar {{
-    background-color: {BG_PANEL};
-    border-right: 1px solid {BORDER};
+QFrame#sidebar {{ background-color: {BG_PANEL}; border-right: 1px solid {BORDER_SOFT}; }}
+QFrame#sidehead, QFrame#sidefoot, QWidget#sidebody {{
+    background-color: {BG_PANEL}; border: none;
 }}
+QFrame#sidefoot {{ border-top: 1px solid {BORDER_SOFT}; }}
+QScrollArea#sidescroll {{ background-color: {BG_PANEL}; border: none; }}
+QScrollArea#sidescroll > QWidget {{ background-color: {BG_PANEL}; }}
 
 QFrame#controlbar {{
     background-color: {BG_PANEL};
-    border-top: 1px solid {BORDER};
-    border-bottom: 1px solid {BORDER};
+    border-top: 1px solid {BORDER_SOFT};
+    border-bottom: 1px solid {BORDER_SOFT};
 }}
+QFrame#statbar {{ background-color: {BG_PANEL}; border-top: 1px solid {BORDER_SOFT}; }}
+QFrame#statblock {{ background: transparent; border: none; }}
 
-QLabel {{
-    color: {TEXT_DIM};
-    background: transparent;
-}}
+QLabel {{ color: {TEXT_DIM}; background: transparent; font-size: 13px; }}
 
 QLabel#header {{
-    color: {TEXT_PRIM};
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: 0.4px;
+    color: {TEXT_PRIM}; font-size: 21px; font-weight: 700; letter-spacing: -0.2px;
 }}
-
 QLabel#subheader {{
-    color: {TEXT_FAINT};
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 2.2px;
+    color: {TEXT_FAINT}; font-size: 11px; font-weight: 700; letter-spacing: 1.4px;
 }}
-
 QLabel#section {{
-    color: {ACCENT};
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 2.2px;
+    color: {ACCENT_TXT}; font-size: 11px; font-weight: 700; letter-spacing: 1.3px;
 }}
-
 QLabel#description {{
-    color: {TEXT_DIM};
-    font-size: 12px;
-    font-style: italic;
-    padding: 4px 2px;
-    line-height: 1.6;
+    color: {TEXT_DIM}; font-size: 13px; font-weight: 400; font-style: normal;
+    padding: 2px 1px;
 }}
+QLabel#formlbl {{
+    color: {TEXT_DIM}; font-size: 13px; min-height: {INPUT_H}px; padding-right: 2px;
+}}
+QLabel#status {{ font-size: 12px; padding: 0px; color: {TEXT_FAINT}; }}
+QLabel#status[state="ok"]    {{ color: {SUCCESS}; }}
+QLabel#status[state="warn"]  {{ color: {WARN}; }}
+QLabel#status[state="error"] {{ color: {ERROR}; }}
 
 QLabel#timecode {{
-    color: {ACCENT2};
-    font-size: 13px;
-    font-weight: 600;
-    font-family: "Cascadia Code", "Consolas", "SF Mono", monospace;
-    letter-spacing: 0.5px;
+    color: {ACCENT2}; font-size: 14px; font-weight: 600;
+    font-family: {MONO}; letter-spacing: 0.2px;
 }}
-
 QLabel#statbig {{
-    color: {TEXT_PRIM};
-    font-size: 14px;
-    font-weight: 600;
-    font-family: "Cascadia Code", "Consolas", "SF Mono", monospace;
+    color: {TEXT_PRIM}; font-size: 18px; font-weight: 600; font-family: {MONO};
 }}
-
 QLabel#statlbl {{
-    color: {TEXT_FAINT};
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 1.6px;
+    color: {TEXT_FAINT}; font-size: 11px; font-weight: 700; letter-spacing: 1.1px;
 }}
 
 QLineEdit, QComboBox {{
     background-color: {BG_INPUT};
-    border: 1px solid {BORDER};
+    border: 2px solid {BORDER};
     border-radius: 8px;
     padding: 7px 11px;
+    min-height: 22px;
+    font-size: 14px;
+    color: {TEXT_PRIM};
     selection-background-color: {ACCENT};
+    selection-color: #ffffff;
+}}
+QComboBox {{ padding-right: 30px; }}
+QLineEdit:hover, QComboBox:hover {{ border-color: {BORDER_HV}; }}
+QLineEdit:focus, QComboBox:focus, QComboBox:on {{
+    border-color: {ACCENT}; background-color: {BG_INPUT2};
+}}
+QLineEdit[bad="true"] {{ border-color: {ERROR}; background-color: #2b1c24; }}
+QLineEdit:disabled, QComboBox:disabled {{
+    background-color: {DISABLED_BG}; border-color: {BORDER_SOFT}; color: {DISABLED_FG};
 }}
 
-QLineEdit:hover, QComboBox:hover  {{ border-color: #4d4d6a; }}
-QLineEdit:focus, QComboBox:focus  {{ border-color: {ACCENT}; background-color: {BG_INPUT2}; }}
-
-QComboBox::drop-down {{ border: none; width: 26px; }}
-QComboBox::down-arrow {{
-    image: none;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 5px solid {TEXT_DIM};
-    margin-right: 9px;
-}}
+QComboBox::drop-down {{ border: none; width: 30px; background: transparent; }}
+QComboBox::down-arrow {{ image: none; width: 0px; height: 0px; border: none; }}
 
 QComboBox QAbstractItemView {{
     background-color: {BG_PANEL};
     border: 1px solid {BORDER};
     border-radius: 8px;
     selection-background-color: {ACCENT};
+    selection-color: #ffffff;
     color: {TEXT_PRIM};
     padding: 6px;
     outline: 0;
+    font-size: 14px;
 }}
 QComboBox QAbstractItemView::item {{
-    padding: 6px 10px;
-    border-radius: 4px;
-    min-height: 22px;
+    padding: 7px 10px; border-radius: 5px; min-height: 26px;
 }}
 
 QPushButton {{
-    background-color: {ACCENT};
-    color: {TEXT_PRIM};
+    font-family: {SYMBOLS};
+    background-color: {ACCENT_FILL};
+    color: #ffffff;
     border: none;
-    padding: 11px 18px;
+    padding: 12px 18px;
+    min-height: 20px;
     border-radius: 8px;
+    font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.3px;
 }}
-QPushButton:hover    {{ background-color: {ACCENT_HV}; }}
-QPushButton:pressed  {{ background-color: #6856e6; }}
-QPushButton:disabled {{ background-color: #2c2c40; color: #5a5a72; }}
+QPushButton:hover    {{ background-color: {ACCENT_FILL_HV}; }}
+QPushButton:pressed  {{ background-color: {ACCENT_FILL_PR}; }}
+QPushButton:disabled {{ background-color: {DISABLED_BG}; color: {DISABLED_FG}; }}
+QPushButton:focus    {{ border: 2px solid #ffffff; padding: 10px 16px; }}
 
-QPushButton#icon {{
+QPushButton#icon, QPushButton#iconwide {{
+    font-family: {SYMBOLS};
     background-color: {BG_INPUT};
-    border: 1px solid {BORDER};
-    padding: 6px 10px;
-    min-width: 38px;
-    font-size: 14px;
+    border: 2px solid {BORDER};
+    padding: 7px 11px;
+    min-width: 22px;
+    min-height: 22px;
+    font-size: 15px;
+    font-weight: 600;
     border-radius: 8px;
     color: {TEXT_PRIM};
 }}
-QPushButton#icon:hover    {{ border-color: {ACCENT}; color: {ACCENT}; }}
-QPushButton#icon:disabled {{ color: #5a5a72; border-color: #2a2a3a; }}
+QPushButton#iconwide {{ min-width: 84px; }}
+QPushButton#icon:hover, QPushButton#iconwide:hover {{
+    background-color: {BG_INPUT2}; border-color: {ACCENT}; color: {TEXT_PRIM};
+}}
+QPushButton#icon:pressed, QPushButton#iconwide:pressed {{ background-color: {ACCENT_FILL_PR}; }}
+QPushButton#icon:focus, QPushButton#iconwide:focus {{ border-color: {ACCENT}; }}
+QPushButton#icon:disabled, QPushButton#iconwide:disabled {{
+    color: {DISABLED_FG}; border-color: {BORDER_SOFT}; background-color: {DISABLED_BG};
+}}
 
 QProgressBar {{
     border: none;
-    border-radius: 4px;
+    border-radius: 3px;
     background-color: {BG_INPUT};
-    height: 5px;
+    min-height: 6px;
+    max-height: 6px;
     text-align: center;
     color: transparent;
+    font-size: 1px;
 }}
-QProgressBar::chunk {{
-    background-color: {SUCCESS};
-    border-radius: 4px;
-}}
+QProgressBar::chunk {{ background-color: {SUCCESS}; border-radius: 3px; }}
 
-QSlider::groove:horizontal {{
-    background: {BG_INPUT};
-    height: 5px;
-    border-radius: 3px;
-}}
-QSlider::sub-page:horizontal {{
-    background: {ACCENT};
-    border-radius: 3px;
-}}
-QSlider::add-page:horizontal {{
-    background: {BG_INPUT};
-    border-radius: 3px;
-}}
+QSlider:horizontal {{ min-height: 26px; background: transparent; }}
+QSlider::groove:horizontal   {{ background: {BG_INPUT}; height: 6px; border-radius: 3px; }}
+QSlider::sub-page:horizontal {{ background: {ACCENT}; border-radius: 3px; }}
+QSlider::add-page:horizontal {{ background: {BG_INPUT}; border-radius: 3px; }}
 QSlider::handle:horizontal {{
-    background: {ACCENT};
-    border: 2px solid {BG_PANEL};
-    width: 14px;
-    height: 14px;
-    margin: -7px 0;
-    border-radius: 9px;
+    background: {ACCENT}; border: 2px solid {BG_PANEL};
+    width: 14px; height: 14px; margin: -6px 0; border-radius: 9px;
 }}
-QSlider::handle:horizontal:hover {{
-    background: {ACCENT_HV};
-    width: 16px;
-    margin: -8px 0;
-    border-radius: 10px;
-}}
+QSlider::handle:horizontal:hover    {{ background: {ACCENT_HV}; border-color: {ACCENT_HV}; }}
+QSlider::handle:horizontal:disabled {{ background: #3a3a54; border-color: {BG_PANEL}; }}
 
-QSplitter::handle {{
-    background-color: {BORDER};
-    width: 1px;
-}}
-
-QScrollBar:vertical {{
-    background: transparent;
-    width: 8px;
-    border: none;
+QSplitter::handle:horizontal {{
+    background-color: {BG_DEEP};
+    border-left: 1px solid {BORDER_SOFT};
+    width: 5px;
     margin: 0;
 }}
+QSplitter::handle:horizontal:hover, QSplitter::handle:horizontal:pressed {{
+    border-left: 2px solid {ACCENT};
+}}
+
+QScrollBar:vertical {{ background: transparent; width: 10px; border: none; margin: 0; }}
 QScrollBar::handle:vertical {{
-    background: {BORDER};
-    border-radius: 4px;
-    min-height: 24px;
+    background: {BORDER}; border-radius: 5px; min-height: 32px;
 }}
 QScrollBar::handle:vertical:hover {{ background: {ACCENT}; }}
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ border: none; background: none; }}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+    border: none; background: none; height: 0px;
+}}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
+
+QToolTip {{
+    background-color: {BG_PANEL}; color: {TEXT_PRIM};
+    border: 1px solid {BORDER}; padding: 6px 8px; border-radius: 6px;
+}}
 """
 
 
@@ -518,6 +536,31 @@ class MaxwellWorker(QThread):
 # =====================================================================
 # Export worker
 # =====================================================================
+def _ffmpeg_available() -> bool:
+    """True if matplotlib can actually write an MP4.
+
+    NOT `shutil.which("ffmpeg")`: the dev dependency `imageio-ffmpeg` ships a
+    bundled binary that never lands on PATH, so `which` reported False and the
+    export silently fell back to GIF even with a perfectly good encoder
+    installed. Ask matplotlib instead, since matplotlib is what does the work.
+    Registering the bundled binary first means a system ffmpeg is preferred
+    when one exists, and the bundled one is used otherwise.
+    """
+    try:
+        if animation.FFMpegWriter.isAvailable():
+            return True                      # a system ffmpeg is on PATH
+    except Exception:
+        pass
+    try:                                      # fall back to the bundled binary
+        import imageio_ffmpeg
+        import matplotlib
+        matplotlib.rcParams["animation.ffmpeg_path"] = \
+            imageio_ffmpeg.get_ffmpeg_exe()
+        return animation.FFMpegWriter.isAvailable()
+    except Exception:
+        return False
+
+
 class ExportWorker(QThread):
     """Render the computed frames to an .mp4 (ffmpeg) or .gif (Pillow) file.
 
@@ -545,13 +588,12 @@ class ExportWorker(QThread):
 
     def run(self):
         try:
-            fig = Figure(figsize=(12.8, 7.2), dpi=100)
+            fig = Figure(figsize=(12.8, 7.2), dpi=100, layout="constrained")
+            fig.get_layout_engine().set(h_pad=0.02, w_pad=0.02,
+                                        hspace=0.03, wspace=0.0)
             FigureCanvasAgg(fig)  # attach a private Agg canvas, never the GUI's
             fig.patch.set_facecolor(BG_DEEP)
-            gs = fig.add_gridspec(
-                2, 1, height_ratios=[1.0, 1.55], hspace=0.10,
-                left=0.075, right=0.965, top=0.945, bottom=0.085,
-            )
+            gs = fig.add_gridspec(2, 1, height_ratios=[1.0, 1.55])
             ax_line = fig.add_subplot(gs[0])
             ax_water = fig.add_subplot(gs[1], sharex=ax_line)
             self._style_axes(ax_line, ax_water)
@@ -568,8 +610,8 @@ class ExportWorker(QThread):
                     float(self.times[0]),
                     float(self.times[-1]),
                 ],
-                cmap="plasma",
-                interpolation="bilinear",
+                cmap="inferno",
+                interpolation=("bilinear" if len(self.frames) >= 60 else "nearest"),
                 vmin=0.0,
                 vmax=max(self.gmax, 1e-12),
             )
@@ -621,7 +663,7 @@ class ExportWorker(QThread):
                     )
                     t_now = float(self.times[i])
                     time_line.set_ydata([t_now, t_now])
-                    ax_line.set_title(f"t = {t_now:.3f}", fontsize=11)
+                    ax_line.set_title(f"t = {t_now:.3f}")
                     writer.grab_frame()
                     self.progress.emit(int(round(100 * (i + 1) / n_frames)))
         except Exception as exc:
@@ -635,18 +677,82 @@ class ExportWorker(QThread):
         for ax in (ax_line, ax_water):
             ax.set_facecolor(BG_PLOT)
             for spine in ax.spines.values():
-                spine.set_color(BORDER)
+                spine.set_color(GRID)
             ax.tick_params(colors=TEXT_DIM, which="both", direction="out", length=4)
             ax.xaxis.label.set_color(TEXT_DIM)
             ax.yaxis.label.set_color(TEXT_DIM)
         ax_line.title.set_color(TEXT_PRIM)
         ax_line.set_ylabel("ψ(n, t)", labelpad=6)
-        ax_line.grid(True, color=BORDER, alpha=0.32, linewidth=0.6)
+        ax_line.grid(True, color=GRID, alpha=0.55, linewidth=0.6)
         ax_line.tick_params(labelbottom=False)
         ax_water.set_xlabel("lattice site n", labelpad=6)
         ax_water.set_ylabel("time t", labelpad=6)
         ax_water.set_title("spacetime  ψ(n, t)", fontsize=10, loc="left",
                            color=TEXT_FAINT, pad=4)
+
+
+class Combo(QComboBox):
+    """QComboBox that paints its own chevron.
+
+    Qt stylesheets cannot draw a CSS border-triangle: ``QComboBox::down-arrow``
+    with border tricks paints a solid square (verified, Qt 6.10 / windows11).
+    The native arrow is collapsed to 0x0 in the stylesheet; we draw text here.
+    U+25BC is present in Segoe UI, so this needs no fallback font.
+    """
+
+    CHEV, CHEV_PX, CHEV_PAD = "\u25BC", 11, 13
+
+    def paintEvent(self, ev):
+        super().paintEvent(ev)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        f = QFont(self.font())
+        f.setPixelSize(self.CHEV_PX)
+        p.setFont(f)
+        if not self.isEnabled():
+            col = DISABLED_FG
+        elif self.hasFocus():
+            col = ACCENT_HV
+        else:
+            col = TEXT_DIM
+        p.setPen(QColor(col))
+        p.drawText(self.rect().adjusted(0, 0, -self.CHEV_PAD, 0),
+                   int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter),
+                   self.CHEV)
+        p.end()
+
+
+class _WheelGuard(QObject):
+    """Wheel over an unfocused combo must not silently change its value.
+
+    Inside the sidebar scroll area the event is forwarded to the scrollbar so
+    the sidebar still scrolls; elsewhere it is swallowed.
+    """
+
+    def __init__(self, parent, scroll_area=None):
+        super().__init__(parent)
+        self._sa = scroll_area
+
+    def eventFilter(self, obj, ev):
+        if ev.type() == QEvent.Type.Wheel and not obj.hasFocus():
+            if self._sa is not None and self._sa.isAncestorOf(obj):
+                bar = self._sa.verticalScrollBar()
+                bar.setValue(bar.value() - ev.angleDelta().y())
+            return True
+        return False
+
+
+def _field_label(name: str, sym: str) -> QLabel:
+    """Two-track form label: prose name + monospace code identifier."""
+    lbl = QLabel(
+        f'<span style="color:{TEXT_DIM};">{name}</span>&nbsp;&nbsp;'
+        f'<span style="font-family:\'Cascadia Code\',Consolas,monospace;'
+        f'color:{ACCENT_TXT};">{sym}</span>'
+    )
+    lbl.setObjectName("formlbl")
+    lbl.setTextFormat(Qt.TextFormat.RichText)
+    lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+    return lbl
 
 
 # =====================================================================
@@ -666,48 +772,77 @@ class MainWindow(QMainWindow):
         root.setSpacing(0)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setHandleWidth(1)
+        splitter.setHandleWidth(5)
+        splitter.setChildrenCollapsible(False)
+        self._splitter = splitter
         root.addWidget(splitter)
 
         # ---------------- Sidebar ----------------
         sidebar = QFrame()
         sidebar.setObjectName("sidebar")
         sidebar.setMinimumWidth(380)
-        sidebar.setMaximumWidth(460)
-        side = QVBoxLayout(sidebar)
-        side.setContentsMargins(26, 26, 26, 22)
-        side.setSpacing(0)
+        sidebar.setMaximumWidth(560)
+        sidebar.setSizePolicy(QSizePolicy.Policy.Preferred,
+                              QSizePolicy.Policy.Expanding)
+        side_root = QVBoxLayout(sidebar)
+        side_root.setContentsMargins(0, 0, 0, 0)
+        side_root.setSpacing(0)
 
+        head = QFrame()
+        head.setObjectName("sidehead")
+        head.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        hv = QVBoxLayout(head)
+        hv.setContentsMargins(24, 20, 24, 14)
+        hv.setSpacing(3)
         title = QLabel("Maxwell Algorithm")
         title.setObjectName("header")
-        side.addWidget(title)
+        hv.addWidget(title)
         sub = QLabel("LATTICE  SCATTERING  WAVE  PACKET")
         sub.setObjectName("subheader")
-        side.addWidget(sub)
+        hv.addWidget(sub)
+        side_root.addWidget(head, 0)
 
-        side.addSpacing(22)
+        self.side_scroll = QScrollArea()
+        self.side_scroll.setObjectName("sidescroll")
+        self.side_scroll.setWidgetResizable(True)
+        self.side_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.side_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.side_scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.side_scroll.setSizePolicy(QSizePolicy.Policy.Preferred,
+                                       QSizePolicy.Policy.Expanding)
+        body = QWidget()
+        body.setObjectName("sidebody")
+        side = QVBoxLayout(body)
+        side.setContentsMargins(24, 4, 18, 16)
+        side.setSpacing(0)
+        self.side_scroll.setWidget(body)
+        side_root.addWidget(self.side_scroll, 1)
+
         side.addWidget(self._section("Preset"))
-        side.addSpacing(6)
-        self.preset_combo = QComboBox()
+        side.addSpacing(8)
+        self.preset_combo = Combo()
         for name in PRESETS:
             self.preset_combo.addItem(name)
         side.addWidget(self.preset_combo)
 
-        side.addSpacing(8)
+        side.addSpacing(12)
         self.preset_desc = QLabel("")
         self.preset_desc.setObjectName("description")
         self.preset_desc.setWordWrap(True)
-        self.preset_desc.setMinimumHeight(56)
+        self.preset_desc.setMinimumHeight(60)
         side.addWidget(self.preset_desc)
 
-        side.addSpacing(6)
+        side.addSpacing(12)
         side.addWidget(self._section("Configuration"))
-        side.addSpacing(6)
+        side.addSpacing(8)
 
         form = QFormLayout()
-        form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
-        form.setHorizontalSpacing(14)
-        form.setVerticalSpacing(7)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight |
+                               Qt.AlignmentFlag.AlignVCenter)
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(10)
         form.setContentsMargins(0, 0, 0, 0)
         side.addLayout(form)
 
@@ -721,52 +856,72 @@ class MainWindow(QMainWindow):
         self.in_b_hi    = QLineEdit()
         self.in_E0      = QLineEdit()
         self.in_sigma_E = QLineEdit()
-        self.in_sigma_mode = QComboBox()
+        self.in_sigma_mode = Combo()
         self.in_sigma_mode.addItems(list(SIGMA_MODES))
         self.in_n_init  = QLineEdit()
         self.in_n_t     = QLineEdit()
         self.in_t_min   = QLineEdit()
         self.in_t_max   = QLineEdit()
         self.in_n_quad  = QLineEdit()
-        self.in_outer   = QComboBox()
-        self.in_outer.addItems(["+", "−"])
+        self.in_outer   = Combo()
+        self.in_outer.addItems(["+  outgoing  w(E,+)", "−  incoming  w(E,−)"])
 
-        form.addRow("Channels  L",         self.in_L)
-        form.addRow("Diagonal  a",         self.in_a)
-        form.addRow("Lattice min  N",      self.in_N)
-        form.addRow("Lattice max  M",      self.in_M)
-        form.addRow("Potential sites  jₖ", self.in_j_sites)
-        form.addRow("V matrices",          self.in_V_sites)
-        form.addRow("Interval  lower",     self.in_a_lo)
-        form.addRow("Interval  upper",     self.in_b_hi)
-        form.addRow("Wave packet  E₀",     self.in_E0)
-        form.addRow("Wave packet  σ_E",    self.in_sigma_E)
-        form.addRow("Sigma mode",          self.in_sigma_mode)
-        form.addRow("Start site  n_init",  self.in_n_init)
-        form.addRow("Outer sign",          self.in_outer)
-        form.addRow("Time frames  n_t",    self.in_n_t)
-        form.addRow("Time start  t_min",   self.in_t_min)
-        form.addRow("Time horizon  t_max", self.in_t_max)
-        form.addRow("Quadrature  n_quad",  self.in_n_quad)
+        form.addRow(_field_label("Channels",        "L"),      self.in_L)
+        form.addRow(_field_label("Hopping",         "a"),      self.in_a)
+        form.addRow(_field_label("Lattice min",     "N"),      self.in_N)
+        form.addRow(_field_label("Lattice max",     "M"),      self.in_M)
+        form.addRow(_field_label("Potential sites", "j_k"),    self.in_j_sites)
+        form.addRow(_field_label("Potential",       "V"),      self.in_V_sites)
+        form.addRow(_field_label("Energy from",     "E_lo"),   self.in_a_lo)
+        form.addRow(_field_label("Energy to",       "E_hi"),   self.in_b_hi)
+        form.addRow(_field_label("Packet centre",   "E_0"),    self.in_E0)
+        form.addRow(_field_label("Packet width",    "s_E"),    self.in_sigma_E)
+        form.addRow(_field_label("Sigma mode",      "h+-"),    self.in_sigma_mode)
+        form.addRow(_field_label("Start site",      "n_init"), self.in_n_init)
+        form.addRow(_field_label("Compare branch",  "+/-"),    self.in_outer)
+        form.addRow(_field_label("Time frames",     "n_t"),    self.in_n_t)
+        form.addRow(_field_label("Time from",       "t_min"),  self.in_t_min)
+        form.addRow(_field_label("Time to",         "t_max"),  self.in_t_max)
+        form.addRow(_field_label("Quadrature",      "n_quad"), self.in_n_quad)
 
-        side.addSpacing(18)
-        side.addWidget(self._section("Status"))
-        side.addSpacing(8)
+        side.addStretch(1)
+
+        foot = QFrame()
+        foot.setObjectName("sidefoot")
+        foot.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        fv = QVBoxLayout(foot)
+        fv.setContentsMargins(24, 14, 24, 16)
+        fv.setSpacing(0)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
-        side.addWidget(self.progress_bar)
-        side.addSpacing(4)
-        self.status_label = QLabel("")
-        self.status_label.setWordWrap(True)
-        self.status_label.setMinimumHeight(38)
-        side.addWidget(self.status_label)
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setVisible(False)
+        fv.addWidget(self.progress_bar)
+        fv.addSpacing(10)
 
-        side.addSpacing(8)
-        self.run_button = QPushButton("▶   Compute & Animate")
+        self.run_button = QPushButton("▶   Compute && Animate")
+        self.run_button.setSizePolicy(QSizePolicy.Policy.Preferred,
+                                      QSizePolicy.Policy.Fixed)
+        self.run_button.setShortcut("Ctrl+Return")
+        self.run_button.setToolTip(
+            "Compute psi(n,t) and start playback   (Ctrl+Enter)")
         self.run_button.clicked.connect(self.run_compute)
-        side.addWidget(self.run_button)
+        fv.addWidget(self.run_button)
+        fv.addSpacing(10)
 
-        side.addStretch()
+        self.status_label = QLabel("")
+        self.status_label.setObjectName("status")
+        self.status_label.setWordWrap(True)
+        self.status_label.setMinimumHeight(32)
+        self.status_label.setMaximumHeight(54)
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignTop |
+                                       Qt.AlignmentFlag.AlignLeft)
+        self.status_label.setSizePolicy(QSizePolicy.Policy.Preferred,
+                                        QSizePolicy.Policy.Fixed)
+        fv.addWidget(self.status_label)
+
+        side_root.addWidget(foot, 0)
         splitter.addWidget(sidebar)
 
         # ---------------- Plot area (right) ----------------
@@ -776,28 +931,38 @@ class MainWindow(QMainWindow):
         right_v.setSpacing(0)
 
         # Figure with two stacked subplots: line + waterfall
-        self.figure = Figure(figsize=(10, 7.5))
+        self.figure = Figure(figsize=(7.2, 5.2), layout="constrained")
+        self.figure.get_layout_engine().set(h_pad=0.02, w_pad=0.02,
+                                            hspace=0.03, wspace=0.0)
         self.figure.patch.set_facecolor(BG_DEEP)
         self.canvas = FigureCanvas(self.figure)
         self.canvas.setStyleSheet(f"background-color: {BG_DEEP};")
-        gs = self.figure.add_gridspec(
-            2, 1, height_ratios=[1.0, 1.55], hspace=0.10,
-            left=0.075, right=0.965, top=0.945, bottom=0.085,
-        )
+        self.canvas.setSizePolicy(QSizePolicy.Policy.Expanding,
+                                  QSizePolicy.Policy.Expanding)
+        self.canvas.setMinimumSize(360, 240)
+        gs = self.figure.add_gridspec(2, 1, height_ratios=[1.0, 1.55])
         self.ax_line  = self.figure.add_subplot(gs[0])
         self.ax_water = self.figure.add_subplot(gs[1], sharex=self.ax_line)
-        self._style_line_axes()
-        self._style_water_axes()
-        self.ax_line.tick_params(labelbottom=False)
-        self.ax_line.set_title("press   ▶  Compute & Animate", fontsize=11)
+        self._empty_hi = self.figure.text(
+            0.5, 0.55, "Compute & Animate", ha="center", va="center",
+            color=TEXT_PRIM, fontsize=17)
+        self._empty_lo = self.figure.text(
+            0.5, 0.485,
+            "pick a preset on the left, then press the button   \u00b7   Ctrl+Enter",
+            ha="center", va="center", color=TEXT_FAINT, fontsize=10)
+        self._colorbar = None
+        self._bg = None
+        self._set_empty(True)
         right_v.addWidget(self.canvas, stretch=1)
 
         # Control bar: play/pause | scrubber | timecode | speed
         controlbar = QFrame()
         controlbar.setObjectName("controlbar")
         cb = QHBoxLayout(controlbar)
-        cb.setContentsMargins(20, 14, 20, 14)
-        cb.setSpacing(14)
+        controlbar.setSizePolicy(QSizePolicy.Policy.Preferred,
+                                 QSizePolicy.Policy.Fixed)
+        cb.setContentsMargins(16, 12, 16, 12)
+        cb.setSpacing(10)
 
         self.play_btn = QPushButton("▶")
         self.play_btn.setObjectName("icon")
@@ -806,6 +971,7 @@ class MainWindow(QMainWindow):
         cb.addWidget(self.play_btn)
 
         self.restart_btn = QPushButton("⏮")
+        self.restart_btn.setToolTip("Restart from frame 0   (Home)")
         self.restart_btn.setObjectName("icon")
         self.restart_btn.setEnabled(False)
         self.restart_btn.clicked.connect(self._restart)
@@ -814,25 +980,33 @@ class MainWindow(QMainWindow):
         self.scrubber = QSlider(Qt.Orientation.Horizontal)
         self.scrubber.setRange(0, 0)
         self.scrubber.setEnabled(False)
+        self.scrubber.setMinimumWidth(120)
+        self.scrubber.setSizePolicy(QSizePolicy.Policy.Expanding,
+                                    QSizePolicy.Policy.Fixed)
         self.scrubber.valueChanged.connect(self._scrubbed)
         cb.addWidget(self.scrubber, stretch=1)
 
-        self.timecode = QLabel("t = 0.00   ·   0 / 0")
+        self.timecode = QLabel("t = 0.000   ·   0 / 0")
         self.timecode.setObjectName("timecode")
+        self.timecode.setMinimumWidth(212)
+        self.timecode.setAlignment(Qt.AlignmentFlag.AlignRight |
+                                   Qt.AlignmentFlag.AlignVCenter)
+        self.timecode.setSizePolicy(QSizePolicy.Policy.Fixed,
+                                    QSizePolicy.Policy.Preferred)
         cb.addWidget(self.timecode)
 
-        speed_lbl = QLabel("speed")
-        speed_lbl.setObjectName("statlbl")
-        cb.addWidget(speed_lbl)
-        self.speed_combo = QComboBox()
+        self.speed_combo = Combo()
         self.speed_combo.addItems(["0.25×", "0.5×", "1×", "2×", "4×"])
         self.speed_combo.setCurrentText("1×")
-        self.speed_combo.setMaximumWidth(78)
+        self.speed_combo.setToolTip("Playback speed")
+        self.speed_combo.setMinimumWidth(96)
+        self.speed_combo.setMaximumWidth(104)
         self.speed_combo.currentTextChanged.connect(self._speed_changed)
         cb.addWidget(self.speed_combo)
 
         self.export_btn = QPushButton("⬇  Export")
-        self.export_btn.setObjectName("icon")
+        self.export_btn.setObjectName("iconwide")
+        self.export_btn.setToolTip("Export animation to MP4/GIF   (Ctrl+E)")
         self.export_btn.setEnabled(False)
         self.export_btn.clicked.connect(self._export_clicked)
         cb.addWidget(self.export_btn)
@@ -841,20 +1015,27 @@ class MainWindow(QMainWindow):
 
         # Stats strip below the controls
         stats = QFrame()
-        stats.setObjectName("controlbar")
+        stats.setObjectName("statbar")
+        stats.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         sl = QHBoxLayout(stats)
-        sl.setContentsMargins(20, 12, 20, 12)
-        sl.setSpacing(28)
+        sl.setContentsMargins(20, 10, 20, 12)
+        sl.setSpacing(22)
 
-        def stat_block(label):
+        def stat_block(label, min_w=116):
             wrap = QFrame()
+            wrap.setObjectName("statblock")
+            wrap.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             v = QVBoxLayout(wrap)
             v.setContentsMargins(0, 0, 0, 0)
-            v.setSpacing(2)
+            v.setSpacing(3)
             lbl = QLabel(label.upper())
             lbl.setObjectName("statlbl")
             big = QLabel("—")
             big.setObjectName("statbig")
+            for q in (lbl, big):
+                q.setMinimumWidth(min_w)
+                q.setAlignment(Qt.AlignmentFlag.AlignLeft |
+                               Qt.AlignmentFlag.AlignVCenter)
             v.addWidget(lbl)
             v.addWidget(big)
             return wrap, big
@@ -871,9 +1052,23 @@ class MainWindow(QMainWindow):
         sl.addStretch()
 
         right_v.addWidget(stats)
+        right_v.setStretch(0, 1)
+        right_v.setStretch(1, 0)
+        right_v.setStretch(2, 0)
 
         splitter.addWidget(right)
-        splitter.setSizes([420, 1180])
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([400, 10_000])
+
+        self.setMinimumSize(QSize(1120, 600))
+        scr = self.screen() or QGuiApplication.primaryScreen()
+        avail = scr.availableGeometry()
+        w0 = max(1120, min(1480, int(avail.width()  * 0.94)))
+        h0 = max(600,  min(940,  int(avail.height() * 0.94)))
+        self.resize(w0, h0)
+        self.move(avail.left() + (avail.width()  - w0) // 2,
+                  avail.top()  + (avail.height() - h0) // 2)
 
         # ---------------- Animation state ----------------
         self.timer = QTimer()
@@ -910,8 +1105,28 @@ class MainWindow(QMainWindow):
                     self.in_E0, self.in_sigma_E, self.in_n_init, self.in_n_t,
                     self.in_t_min, self.in_t_max, self.in_n_quad):
             inp.textChanged.connect(self._field_edited)
-        self.in_outer.currentTextChanged.connect(self._field_edited)
+        # in_outer is a solver-branch selector, NOT a spec field: connecting it
+        # to _field_edited flipped the preset to Custom and silently swapped the
+        # window f / E_segments out from under the user.
         self.in_sigma_mode.currentTextChanged.connect(self._field_edited)
+        for _le in (self.in_L, self.in_a, self.in_N, self.in_M,
+                    self.in_j_sites, self.in_V_sites, self.in_a_lo, self.in_b_hi,
+                    self.in_E0, self.in_sigma_E, self.in_n_init, self.in_n_t,
+                    self.in_t_min, self.in_t_max, self.in_n_quad):
+            _le.returnPressed.connect(self.run_compute)
+
+        self._wheel_guard = _WheelGuard(self, self.side_scroll)
+        for _c in (self.preset_combo, self.in_sigma_mode, self.in_outer,
+                   self.speed_combo):
+            _c.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            _c.installEventFilter(self._wheel_guard)
+
+        self.setTabOrder(self.preset_combo, self.in_L)
+        self.setTabOrder(self.run_button, self.play_btn)
+        self.setTabOrder(self.play_btn, self.restart_btn)
+        self.setTabOrder(self.restart_btn, self.scrubber)
+        self.setTabOrder(self.scrubber, self.speed_combo)
+        self.setTabOrder(self.speed_combo, self.export_btn)
 
         self._preset_changed(self.preset_combo.currentText())
         self._silent = False
@@ -922,31 +1137,68 @@ class MainWindow(QMainWindow):
         lbl.setObjectName("section")
         return lbl
 
+    def _set_status(self, text: str, kind: str = "info"):
+        self.status_label.setText(text)
+        self.status_label.setToolTip(text)
+        self.status_label.setProperty("state", kind)
+        self.status_label.style().unpolish(self.status_label)
+        self.status_label.style().polish(self.status_label)
+
+    def _set_empty(self, on: bool, msg: str | None = None,
+                   sub: str | None = None):
+        """Blank both axes and show a centred call-to-action, or restore them."""
+        if on:
+            for ax in (self.ax_line, self.ax_water):
+                ax.set_xticks([]); ax.set_yticks([])
+                ax.grid(False)
+                ax.set_xlabel(""); ax.set_ylabel(""); ax.set_title("")
+                ax.set_facecolor(BG_DEEP)
+                for s in ax.spines.values():
+                    s.set_visible(False)
+            if msg is not None:
+                self._empty_hi.set_text(msg)
+            if sub is not None:
+                self._empty_lo.set_text(sub)
+            self._empty_hi.set_visible(True)
+            self._empty_lo.set_visible(True)
+        else:
+            self._empty_hi.set_visible(False)
+            self._empty_lo.set_visible(False)
+            for ax in (self.ax_line, self.ax_water):
+                for s in ax.spines.values():
+                    s.set_visible(True)
+            self._style_line_axes()
+            self._style_water_axes()
+            self.ax_line.tick_params(labelbottom=False)
+        self._bg = None
+        self.canvas.draw_idle()
+
     def _style_line_axes(self):
         ax = self.ax_line
         ax.set_facecolor(BG_PLOT)
         for spine in ax.spines.values():
-            spine.set_color(BORDER)
-        ax.tick_params(colors=TEXT_DIM, which="both", direction="out", length=4)
-        ax.xaxis.label.set_color(TEXT_DIM)
-        ax.yaxis.label.set_color(TEXT_DIM)
-        ax.title.set_color(TEXT_PRIM)
+            spine.set_color(GRID)
+        ax.tick_params(colors=TEXT_DIM, which="both", direction="out", length=4,
+                       labelsize=9)
+        ax.xaxis.label.set_color(TEXT_DIM); ax.xaxis.label.set_fontsize(9.5)
+        ax.yaxis.label.set_color(TEXT_DIM); ax.yaxis.label.set_fontsize(9.5)
+        ax.title.set_color(TEXT_PRIM); ax.title.set_fontsize(10.5)
         ax.set_ylabel("ψ(n, t)", labelpad=6)
-        ax.grid(True, color=BORDER, alpha=0.32, linewidth=0.6)
+        ax.grid(True, color=GRID, alpha=0.55, linewidth=0.6)
 
     def _style_water_axes(self):
         ax = self.ax_water
         ax.set_facecolor(BG_PLOT)
         for spine in ax.spines.values():
-            spine.set_color(BORDER)
-        ax.tick_params(colors=TEXT_DIM, which="both", direction="out", length=4)
-        ax.xaxis.label.set_color(TEXT_DIM)
-        ax.yaxis.label.set_color(TEXT_DIM)
-        ax.title.set_color(TEXT_DIM)
+            spine.set_color(GRID)
+        ax.tick_params(colors=TEXT_DIM, which="both", direction="out", length=4,
+                       labelsize=9)
+        ax.xaxis.label.set_color(TEXT_DIM); ax.xaxis.label.set_fontsize(9.5)
+        ax.yaxis.label.set_color(TEXT_DIM); ax.yaxis.label.set_fontsize(9.5)
         ax.set_xlabel("lattice site n", labelpad=6)
         ax.set_ylabel("time t", labelpad=6)
-        ax.set_title("spacetime  ψ(n, t)", fontsize=10, loc="left",
-                     color=TEXT_FAINT, pad=4)
+        ax.set_title("SPACETIME  ψ(n, t)", fontsize=9, loc="left",
+                     color=TEXT_FAINT, pad=5, fontweight="bold")
 
     # ----------------------------------------------------------------- presets
     def _preset_changed(self, name: str):
@@ -962,16 +1214,37 @@ class MainWindow(QMainWindow):
         self.in_E0.setText(cfg["E0"]);          self.in_sigma_E.setText(cfg["sigma_E"])
         # presets store the short mode name; match the full combo label
         self.in_sigma_mode.setCurrentText(
-            next(k for k in SIGMA_MODES if k.startswith(cfg["sigma_mode"]))
+            next((k for k in SIGMA_MODES if k.startswith(cfg["sigma_mode"])),
+                 next(iter(SIGMA_MODES)))
         )
         self.in_n_init.setText(cfg["n_init"])
         self.in_n_t.setText(cfg["n_t"]);        self.in_t_min.setText(cfg["t_min"])
         self.in_t_max.setText(cfg["t_max"]);    self.in_n_quad.setText(cfg["n_quad"])
-        self.in_outer.setCurrentText("+" if cfg["outer"] == "+" else "−")
+        self.in_outer.setCurrentIndex(0 if cfg["outer"] == "+" else 1)
         self._silent = False
-        self.status_label.setText("")
+        uses_window_f = name in PRESET_F
+        for wdg in (self.in_E0, self.in_sigma_E, self.in_sigma_mode,
+                    self.in_n_init, self.in_a_lo, self.in_b_hi):
+            wdg.setEnabled(not uses_window_f)
+            wdg.setToolTip(
+                "Ignored by this preset — f is a fixed step-function window and "
+                "quadrature runs per E-segment." if uses_window_f else "")
+        self.setWindowTitle(f"Maxwell Algorithm — {name.split(' — ')[0]}")
+        self._idle_status()
+
+    def _idle_status(self):
+        """Cheap cost preview: what this run will actually chew through."""
+        try:
+            n_t = int(self.in_n_t.text())
+            span = int(self.in_M.text()) - int(self.in_N.text()) + 1
+            nq = int(self.in_n_quad.text())
+        except Exception:
+            self._set_status("", "info")
+            return
+        self._set_status(f"{n_t} frames · {span} sites · n_quad {nq}", "info")
 
     def _field_edited(self, *_):
+        self._idle_status()
         if self._silent:
             return
         custom = "Custom — edit fields below"
@@ -988,7 +1261,7 @@ class MainWindow(QMainWindow):
         try:
             spec = self._build_spec()
         except Exception as exc:
-            self.status_label.setText(f"Input error:  {exc}")
+            self._set_status(f"Input error:  {exc}", "error")
             return
 
         # Advisory aliasing check (single-interval runs only; the per-window
@@ -996,7 +1269,23 @@ class MainWindow(QMainWindow):
         # Under-resolved quadrature folds a phantom mirror packet into psi --
         # the t=0 frame looks fine, the waterfall doubles its mass.
         self._nquad_warning = ""
-        if spec.E_segments is None:
+        try:
+            recommended = None
+            if spec.E_segments is None:
+                recommended = min_nquad(
+                    spec.N, spec.M, float(spec.times[0]), float(spec.times[-1]),
+                    spec.interval[0], spec.interval[1], spec.a,
+                )
+            lattice = spec.lattice()
+        except Exception as exc:
+            self._set_status(f"Input error:  {type(exc).__name__}: {exc}", "error")
+            return
+        if recommended is not None and spec.n_quad < recommended:
+            self._nquad_warning = (
+                f"   ⚠ n_quad={spec.n_quad} may alias "
+                f"(phantom mirror packet); recommend ≥ {recommended}"
+            )
+        if False:
             recommended = min_nquad(
                 spec.N, spec.M, float(spec.times[0]), float(spec.times[-1]),
                 spec.interval[0], spec.interval[1], spec.a,
@@ -1028,7 +1317,7 @@ class MainWindow(QMainWindow):
         self._inflight_workers = [w for w in self._inflight_workers if w.isRunning()]
 
         # ---- prepare new run ----
-        self.lattice = spec.lattice()
+        self.lattice = lattice
         self.times = spec.times
         self._j_sites_for_render = np.asarray(spec.j_sites, dtype=int)
         self.progress_bar.setValue(0)
@@ -1041,19 +1330,28 @@ class MainWindow(QMainWindow):
         self.scrubber.setRange(0, 0)
         self.scrubber.setValue(0)
         self.scrubber.blockSignals(False)
-        self.status_label.setText("Computing…" + self._nquad_warning)
+        self._set_status("Computing…" + self._nquad_warning,
+                         "warn" if self._nquad_warning else "info")
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.setVisible(True)
         self.line = None
         self.fill = None
         self.water_image = None
         self.water_time_line = None
         self.line_potential_lines = []
         self.water_potential_lines = []
+        if self._colorbar is not None:
+            try:
+                self._colorbar.remove()
+            except Exception:
+                pass
+            self._colorbar = None
         self.ax_line.clear()
         self.ax_water.clear()
-        self._style_line_axes()
-        self._style_water_axes()
-        self.ax_line.tick_params(labelbottom=False)
-        self.ax_line.set_title("Computing…", fontsize=11)
+        self._set_empty(
+            True, "Computing…",
+            f"{spec.times.size} frames × {spec.M - spec.N + 1} sites"
+            f"   ·   n_quad {spec.n_quad}")
         self.canvas.draw()
         self.timecode.setText("t = 0.000   ·   0 / 0")
         for s in (self.stat_max, self.stat_norm, self.stat_peak, self.stat_t):
@@ -1095,12 +1393,15 @@ class MainWindow(QMainWindow):
         if token != self._compute_token:
             return
         self.run_button.setEnabled(True)
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setRange(0, 100)
         self._inflight_workers = [w for w in self._inflight_workers if w.isRunning()]
-        self.status_label.setText(f"Error:  {msg}")
+        self._set_status(f"Error:  {msg}", "error")
 
     def on_finished(self, frames, gmax):
         if not frames:
-            self.status_label.setText("No frames produced.")
+            self.progress_bar.setVisible(False)
+            self._set_status("No frames produced.", "warn")
             return
         self.frames = frames
         self.gmax = gmax
@@ -1108,15 +1409,29 @@ class MainWindow(QMainWindow):
         self.frame_idx = 0
         self.line = None
         self.fill = None
-        self.progress_bar.setValue(100)
-        self.status_label.setText(
-            f"{len(frames)} frames · {self.lattice.size} sites · "
-            f"max ψ = {gmax:.4g}" + self._nquad_warning
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setRange(0, 100)
+        n = len(frames)
+        self._set_status(
+            f"{n} frame{'s' if n != 1 else ''} · {self.lattice.size} sites · "
+            f"max ψ = {gmax:.4g}" + self._nquad_warning,
+            "warn" if self._nquad_warning else "ok",
         )
         self.stat_max.setText(f"{gmax:.4f}")
 
-        # Render the spacetime waterfall once
+        # Restore real axes, then render the spacetime waterfall once
+        self._set_empty(False)
         self._render_waterfall()
+        self.ax_line.set_title(
+            f"ψ(n, t)   ·   {self.preset_combo.currentText().split(' — ')[0]}",
+            fontsize=10.5, loc="left", color=TEXT_FAINT, pad=4)
+        self._render_frame(0)
+        self.frame_idx = 1
+        for art in (self.line, self.fill, self.water_time_line):
+            if art is not None:
+                art.set_animated(True)
+        self.canvas.draw()
+        self._bg = self.canvas.copy_from_bbox(self.figure.bbox)
 
         # Enable transport controls
         self.scrubber.blockSignals(True)
@@ -1148,8 +1463,8 @@ class MainWindow(QMainWindow):
     def _restart(self):
         if self.frames is None:
             return
-        self.frame_idx = 0
         self._render_frame(0)
+        self.frame_idx = 1
         self._set_scrubber(0)
         if not self.timer.isActive():
             self.timer.start(self._timer_ms())
@@ -1183,7 +1498,7 @@ class MainWindow(QMainWindow):
     def _export_clicked(self):
         if self.frames is None:
             return
-        have_ffmpeg = shutil.which("ffmpeg") is not None
+        have_ffmpeg = _ffmpeg_available()
         if have_ffmpeg:
             default_name, name_filter = "maxwell.mp4", "MP4 video (*.mp4)"
         else:
@@ -1195,8 +1510,11 @@ class MainWindow(QMainWindow):
             return
 
         self.export_btn.setEnabled(False)
+        self.run_button.setEnabled(False)
+        self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
-        self.status_label.setText("Exporting…")
+        self.progress_bar.setVisible(True)
+        self._set_status("Exporting…", "info")
 
         worker = ExportWorker(
             frames=self.frames,
@@ -1216,15 +1534,18 @@ class MainWindow(QMainWindow):
 
     def _on_export_done(self, path: str):
         self._inflight_workers = [w for w in self._inflight_workers if w.isRunning()]
-        self.progress_bar.setValue(100)
-        self.status_label.setText(f"Export saved:  {path}")
+        self.progress_bar.setVisible(False)
+        self.run_button.setEnabled(True)
+        self._set_status(f"Export saved:  {path}", "ok")
         # Only re-enable if there is still an animation to export (a compute
         # may have started, and cleared frames, while we were writing).
         self.export_btn.setEnabled(self.frames is not None)
 
     def _on_export_failed(self, msg: str):
         self._inflight_workers = [w for w in self._inflight_workers if w.isRunning()]
-        self.status_label.setText(f"Export failed:  {msg}")
+        self.progress_bar.setVisible(False)
+        self.run_button.setEnabled(True)
+        self._set_status(f"Export failed:  {msg}", "error")
         self.export_btn.setEnabled(self.frames is not None)
 
     # ----------------------------------------------------------------- rendering
@@ -1244,8 +1565,8 @@ class MainWindow(QMainWindow):
                 float(self.times[0]),
                 float(self.times[-1]),
             ],
-            cmap="plasma",
-            interpolation="bilinear",
+            cmap="inferno",
+            interpolation=("bilinear" if len(self.frames) >= 60 else "nearest"),
             vmin=0.0,
             vmax=max(self.gmax, 1e-12),
         )
@@ -1268,6 +1589,11 @@ class MainWindow(QMainWindow):
 
         ax.set_xlim(self.lattice[0], self.lattice[-1])
         ax.set_ylim(self.times[0], self.times[-1])
+
+        self._colorbar = self.figure.colorbar(
+            self.water_image, ax=ax, pad=0.012, fraction=0.032)
+        self._colorbar.ax.tick_params(colors=TEXT_DIM, labelsize=8)
+        self._colorbar.outline.set_edgecolor(GRID)
 
     def _render_frame(self, idx: int):
         """Render frame `idx` without advancing."""
@@ -1313,9 +1639,6 @@ class MainWindow(QMainWindow):
         if self.water_time_line is not None:
             self.water_time_line.set_ydata([t_now, t_now])
 
-        # Top-right title with timecode
-        self.ax_line.set_title("", fontsize=11)
-
         # Stats strip
         self.timecode.setText(f"t = {t_now:.3f}   ·   {idx + 1} / {len(self.frames)}")
         self.stat_t.setText(f"{t_now:.3f}")
@@ -1323,7 +1646,30 @@ class MainWindow(QMainWindow):
         self.stat_peak.setText(f"{int(self.lattice[peak_idx])}")
         self.stat_norm.setText(f"{float(np.sum(curve)):.3f}")
 
-        self.canvas.draw_idle()
+        if self._bg is None:
+            self.canvas.draw()
+            return
+        for art in (self.line, self.fill, self.water_time_line):
+            if art is not None:
+                art.set_animated(True)
+        self.canvas.restore_region(self._bg)
+        self.ax_line.draw_artist(self.fill)
+        self.ax_line.draw_artist(self.line)
+        if self.water_time_line is not None:
+            self.ax_water.draw_artist(self.water_time_line)
+        self.canvas.blit(self.figure.bbox)
+        self.canvas.flush_events()
+
+    def resizeEvent(self, event):
+        self._bg = None
+        super().resizeEvent(event)
+        QTimer.singleShot(0, self._recapture_bg)
+
+    def _recapture_bg(self):
+        if self.frames is None or self.line is None:
+            return
+        self.canvas.draw()
+        self._bg = self.canvas.copy_from_bbox(self.figure.bbox)
 
     def tick(self):
         try:
@@ -1344,7 +1690,7 @@ class MainWindow(QMainWindow):
             # timer for the rest of the session.
             self.timer.stop()
             self.play_btn.setText("▶")
-            self.status_label.setText(f"Render paused:  {exc}")
+            self._set_status(f"Render paused:  {exc}", "warn")
 
     # ----------------------------------------------------------------- shutdown
     def closeEvent(self, event):
@@ -1355,7 +1701,7 @@ class MainWindow(QMainWindow):
         for w in list(self._inflight_workers):
             try:
                 if w.isRunning():
-                    w.wait(1500)
+                    w.wait(250)
             except RuntimeError:
                 pass
         self._inflight_workers.clear()
@@ -1404,10 +1750,23 @@ class MainWindow(QMainWindow):
         t_min   = float(self.in_t_min.text())
         t_max   = float(self.in_t_max.text())
         n_quad  = int(self.in_n_quad.text())
-        outer   = +1 if self.in_outer.currentText() == "+" else -1
+        outer   = +1 if self.in_outer.currentIndex() == 0 else -1
         h_plus, h_minus = SIGMA_MODES[self.in_sigma_mode.currentText()]
         if t_min >= t_max:
             raise ValueError("need t_min < t_max")
+        if n_t < 2:
+            raise ValueError("need at least 2 time frames (n_t ≥ 2)")
+        if n_quad < 8:
+            raise ValueError("n_quad must be ≥ 8")
+        if sigma_E <= 0:
+            raise ValueError("σ_E must be > 0")
+        if not (N <= n_init <= M):
+            raise ValueError(f"n_init must lie in [N, M] = [{N}, {M}]")
+        if (M - N + 1) * n_t > 40_000_000:
+            raise ValueError(
+                f"{(M - N + 1) * n_t:,} lattice×time samples is too large; "
+                f"reduce N/M or n_t"
+            )
 
         # Schober window presets carry a fixed step-function f (keyed by preset
         # name); every other preset / Custom builds the Gaussian f from the form.

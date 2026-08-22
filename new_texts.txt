@@ -1,0 +1,52 @@
+[16:28, 21/08/2026] Jonas Schober: Bro
+[16:28, 21/08/2026] Jonas Schober: You are smart.
+[16:28, 21/08/2026] Jonas Schober: I am stupid.
+[16:28, 21/08/2026] Maxwell: no I am not
+[16:29, 21/08/2026] Jonas Schober: You are absolutely right!
+[16:29, 21/08/2026] Maxwell: are you fucking serious
+[16:29, 21/08/2026] Maxwell: sorry that just made me feel smart
+[16:29, 21/08/2026] Maxwell: excuse my profanity
+[16:29, 21/08/2026] Jonas Schober: The two videos should differ by S^E, they should not be the same!
+[16:29, 21/08/2026] Maxwell: hell yeah
+[16:30, 21/08/2026] Maxwell: there are the two presets that are called schober 1 and schober 2
+[16:30, 21/08/2026] Jonas Schober: They would look the same if you start with the same state, but you are not, you are starting with the same Fourier transform under two different Fourier transforms, so if you transform back, you get two different states.
+[16:31, 21/08/2026] Maxwell: so I actually did something right 🤣?
+[16:31, 21/08/2026] Jonas Schober: But it is still still good, that you did all your analysis, because that means that you can actually calculate S^E. So we could do a second part of the project in which we calculate the Levinson integral.
+[16:31, 21/08/2026] Jonas Schober: For this we actually need the determinant and everything you did.
+[16:32, 21/08/2026] Jonas Schober: so I actually did something right ?
+Not just right, you 100% exceeded my exspectations. I have no idea how you pulled this off with the material I gave you, those notes were unreadable.
+[16:33, 21/08/2026] Maxwell: I am pretty proud of my work actually. I still don't feel super confident about how much I understand everything
+[16:33, 21/08/2026] Maxwell: my moto has just been "put one foot in front of the other"
+[16:33, 21/08/2026] Jonas Schober: there are the two presets that are called schober 1 and schober 2
+Ok, but do you have the actual videos? I am just getting pictures.
+[16:33, 21/08/2026] Maxwell: when working on this stuff
+[16:33, 21/08/2026] Maxwell: click on them
+[16:33, 21/08/2026] Maxwell: they are giffs
+[16:34, 21/08/2026] Maxwell: oh
+[16:34, 21/08/2026] Maxwell: its not rendering the gif
+[16:34, 21/08/2026] Maxwell: my bad
+[16:34, 21/08/2026] Maxwell: give me a second to convert
+[16:34, 21/08/2026] Jonas Schober: Photo
+Can I also have this as a video?
+[16:34, 21/08/2026] Jonas Schober: Photo
+And this?
+[16:34, 21/08/2026] Maxwell: yes
+[16:35, 21/08/2026] Jonas Schober: On Tuesday I will present this research, so I want to convince them that this is the coolest shit ever.
+[16:35, 21/08/2026] Maxwell: I am converting it right now for you
+[16:35, 21/08/2026] Jonas Schober: Thanks
+[16:35, 21/08/2026] Maxwell: you know my wife is smarter than me right?
+I think she would probably be interested in working with you if you need more help
+[16:36, 21/08/2026] Jonas Schober: But it is still still good, that you did all your analysis, because that means that you can actually calculate S^E. So we could do a second part of the project in which we calculate the Levinson integral.
+You want to continue with they project or are you already sick of me telling you wrong stuff?
+[16:36, 21/08/2026] Jonas Schober: you know my wife is smarter than me right?
+Seems plausible
+[16:36, 21/08/2026] Jonas Schober: I think she would probably be interested in working with you if you need more help
+Yes, she'll start October 12.
+[16:37, 21/08/2026] Jonas Schober: But I want her to do math, not programming.
+[16:37, 21/08/2026] Maxwell: also you know that I didn't solve all of this like a traditional mathematician right? I just computed what you told me too and compared the actual number tables to one another and tried to synthesize why they where different?
+[16:38, 21/08/2026] Maxwell: You want to continue with they project or are you already sick of me telling you wrong stuff?
+I enjoy it if you understand that the time I spend on this isnt to get you a product its to actuall figure shiz out. Like a lot of my time is just trying to figure out what the fuck any of this actually means
+[16:39, 21/08/2026] Jonas Schober: also you know that I didn't solve all of this like a traditional mathematician right? I just computed what you told me too and compared the actual number tables to one another and tried to synthesize why they where different?
+I don't care how you did it, that you did it is what counts.
+[16:40, 21/08/2026] Jonas Schober: I enjoy it if you understand that the time I spend on this isnt to get you a product its to actuall figure shiz out. Like a lot of my time is just trying to figure out what the fuck any of this actually means
+Yes, that's the point.
