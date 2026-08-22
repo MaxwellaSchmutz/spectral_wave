@@ -55,3 +55,27 @@ authority cited by the A.10 and A.11 commit (`9e319a0`) and by the docstrings in
 Full audit of the repo, 2026-08-21 — what is verified and to what precision, what is still
 open, a drafted message to Schober (§4), what to show him (§5), and the action list that
 needs no ruling (§7). Start at §1.
+
+## `PAPER_NOTES.md`
+
+Errors found in the three papers and the algorithm spec, each verified by a second agent
+whose job was to refute it, and most backed by a number. Section 1 is grouped by paper and
+ordered by severity, and includes a **"checked and CORRECT — do not let anyone fix these"**
+list, which matters as much as the error list. Section 2 is twelve questions ready to paste
+into an email, each answerable in a sentence or two. Section 3 is the convention table
+across all four documents; section 4 is what could not be checked.
+
+## `LEVINSON_GUIDE.md`
+
+The learning path for the next phase. After Schober confirmed the `S^E` result he proposed
+computing the **Levinson integral**, explicitly because the code can now produce `S^E` and
+its determinant. This guide builds from the argument principle — which you already have
+from complex analysis — to the actual formula, with a numerical exercise against this repo
+at each step, and a two-week and three-month plan.
+
+The target result is Ballesteros–Franco–Naumkin–Schulz-Baldes, *Levinson theorem for
+discrete Schrödinger operators on the line with matrix potentials having a first moment*
+([arXiv:2211.05021](https://arxiv.org/abs/2211.05021), Thm 4) — almost certainly the
+`[BFNS24]` in paper 1's bibliography. Note it assumes `A = 1`, so all channels open and
+close together. This project is the case where they close one at a time, which is where the
+new mathematics is and why Schober wants it.
