@@ -25,7 +25,26 @@ one's main theorem as a black box.
 | **`1_JostSolutions.pdf`** | 1 Jul 2025 | the Jost solutions `u^{E,σ}_τ` | Thm 3.3 + 3.7: existence, uniqueness, analyticity in `E`, via a Neumann series on a Volterra kernel |
 | **`2_LimitingAbsorptionPrinciple.pdf`** | 2 Jul 2025 | the Green's function, the LAP, the scattering matrix `S^E` | Lemma 3.1.4 + Thm 3.2.1: the resolvent kernel stays continuous down onto the real band |
 | **`3_GeneralizedFourier.pdf`** | **14 Aug 2026** | the transforms `F_±`, then `Ω_±` and `S` | **Thm 3.2.5(a), p. 20**: `F_±^* F_± = P_ac(H)`. Schober: *"The whole reason why you do what you do."* |
+| `3_GeneralizedFourier(2025).pdf` | 1 Jul 2025 | superseded — kept for reference | see the version note below |
 | **`4_Levinson.pdf`** | **12 Aug 2026** | — | **draft in progress; not summarised here** |
+
+### Paper 3 has had three versions — check which one a note refers to
+
+| bytes | pp | date | title |
+|---|---|---|---|
+| 158,527 | 24 | 1 Jul 2025 | ***Calculating** wave and scattering operators…* — the `(2025)` file |
+| 408,416 | 27 | 14 Jul 2026 | *Wave and scattering operators…* — **not on disk**, in git at `8e86830` |
+| 423,462 | 28 | 14 Aug 2026 | *Wave and scattering operators…* — the current file |
+
+It was retitled and substantially expanded between the 2025 and July 2026 versions, then
+revised again in August. Numbering changed across all three, so a theorem label alone does
+not identify a result — `Thm 2.2.5` in an old note is `Thm 3.2.5(a)` now.
+
+Which version each thing in this repo was written against:
+
+- the earliest notes in `AUDIT.md` §2 — the **2025** file
+- `PAPER_NOTES.md` §1.3, since deleted — the **July 2026** file
+- nothing has been audited against the **August 2026** file
 
 The repo's `psi(n,t)` is the inverse of paper 3's expansion theorem — run backwards, with
 `e^{-iEt}` supplying the only time dependence.

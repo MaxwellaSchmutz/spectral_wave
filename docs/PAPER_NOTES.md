@@ -287,11 +287,14 @@ Def 3.1.1's `−` on `n > j` / `+` on `n ≤ j` and its explicit leading `i` (re
 
 ## 1.3 Paper 3 — REMOVED 2026-08-24
 
-The errata that stood here were written on 2026-08-21 against a 27-page draft titled
-*Generalized Fourier transform...*. That paper was **rewritten**, not patched: it is now
-28 pages, dated **14 August 2026**, retitled ***Wave and scattering operators...***, and
-renumbered end to end. Roughly 83% of the assertions in this section referred to labels
-that no longer exist.
+The errata that stood here were written on 2026-08-21 against the **14 July 2026** version
+(27 pp, 408,416 B). The current file is the **14 August 2026** revision (28 pp), and the
+numbering changed enough that roughly 83% of the assertions here referred to labels that no
+longer exist.
+
+(A third version is also on disk: `3_GeneralizedFourier(2025).pdf`, 1 July 2025, 24 pp,
+titled *Calculating wave and scattering operators...*. That is the original, superseded by
+both. `../docs/README.md` has the full version table.)
 
 Several of the things it reported are fixed in the current version:
 
