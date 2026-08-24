@@ -1,3 +1,8 @@
+> **Archive — sent and answered.** This memo raised A.10, A.11 and A.12. Schober replied
+> on 2026-08 (`professor_response.txt`) ruling on all three, and confirmed the A.12 reading
+> in person on 2026-08-21 (`../new_texts.txt`). Kept as a record; it is not a live question
+> list.
+
 Hi Jonas,
 
 The i-correction and interpretation 2 are in. The u's now solve (H−E)u = 0 to machine

@@ -5,8 +5,8 @@ happens when it runs into something. You pick a setup, hit a button, and get an
 animation plus a heatmap of the whole thing.
 
 It's my implementation of an algorithm my professor, Jonas Schober, wrote out
-for me. The math behind it is his and his coauthor's — three papers, all in
-`docs/papers/`. The code is mine.
+for me. The math behind it is his and his coauthor's — four papers, all in
+`docs/papers/`, the last two still being written. The code is mine.
 
 ## What you're actually looking at
 
@@ -39,8 +39,7 @@ knock the wave from one lane into another. Those lanes are called **channels**.
 **The speeds are sorted.** `a_1 >= a_2 >= ... >= a_L > 0`. This matters more
 than it looks. Each channel `l` can only carry a wave at energies `|E| < 2*a_l`;
 outside that range it's stuck. So as you dial the energy up, channels shut off
-one at a time. That's the whole subject of the three papers, and it's why they
-exist.
+one at a time. That's the whole subject of the papers, and it's why they exist.
 
 ## How the algorithm works
 
@@ -76,8 +75,9 @@ Step 10 is the payoff, and everything above it is setup:
 `f` means a sharp packet in space that spreads fast. Narrow `f` means a long
 smeared packet that holds its shape.
 
-The reason any of this is legitimate is Theorem 2.2.5 of the third paper, which
-proves those modes are a complete, non-redundant basis. Schober's words: *"the
+The reason any of this is legitimate is Theorem 3.2.5(a) of the third paper
+(p. 20), which proves those modes are a complete, non-redundant basis. Schober's
+words: *"the
 algorithm that you programmed diagonalizes the infinite matrix, which allows us
 to calculate its exponential and therefore how things behave over time."*
 
@@ -117,9 +117,9 @@ Pick a preset from the dropdown. There are thirteen:
 Editing any field flips the dropdown to "Custom" so you can keep tweaking
 without losing your starting point. **Careful:** on the Schober presets that
 also silently swaps out the special step-function `f` and the per-window
-integration, so you get a plain Gaussian instead. Same goes for the outer-sign
-dropdown, which makes it awkward to run the plus-vs-minus comparison from the
-GUI. Both are on the fix list in `docs/AUDIT.md`.
+integration, so you get a plain Gaussian instead. (The outer-sign dropdown used
+to do the same thing, which made the plus-vs-minus comparison awkward to run
+from the GUI; that one is fixed.)
 
 For the Gaussian presets:
 

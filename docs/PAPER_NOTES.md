@@ -13,6 +13,16 @@
 
 ---
 
+> **Version warning, added 2026-08-24.** The errata in sections 1.1 and 1.2 were written
+> against `1_JostSolutions.pdf` (37 pp, 1 July 2025) and
+> `2_LimitingAbsorptionPrinciple.pdf` (30 pp, 2 July 2025) -- the copies in this repo.
+> `4_Levinson.pdf` cites **2026 revisions of both**, which are not here. Anything in these
+> two sections may already be fixed in the author's current drafts. Ask for the current
+> versions before sending any of it.
+>
+> Section 1.3 (paper 3) and section 2 (the questions) were removed on 2026-08-24 because
+> paper 3 was rewritten on 2026-08-14. See the placeholders in place of each.
+
 # 1. What to tell Jonas about his papers
 
 ## 1.0 One-line severity map
@@ -275,98 +285,36 @@ Def 3.1.1's `−` on `n > j` / `+` on `n ≤ j` and its explicit leading `i` (re
 
 ---
 
-## 1.3 Paper 3 — *Generalized Fourier transform / diagonalization*
+## 1.3 Paper 3 — REMOVED 2026-08-24
 
-**Housekeeping first, because the numbering in earlier notes was wrong.** The file is **27 pages**. There is no Theorem 2.2.5, no Theorem 3.1, no Theorem 3.2. The real numbers: completeness/unitarity of `F_±` is **Theorem 3.2.5** (p.19); `Ω_± = F_±^*F_0` is **Theorem 4.1** (p.22); the statement for `S` is **Theorem 4.4(b)** (p.24). Also the paper writes **`B^E` and `S^E`** (superscripts), not `B_E`/`S_E` — worth matching before sending.
+The errata that stood here were written on 2026-08-21 against a 27-page draft titled
+*Generalized Fourier transform...*. That paper was **rewritten**, not patched: it is now
+28 pages, dated **14 August 2026**, retitled ***Wave and scattering operators...***, and
+renumbered end to end. Roughly 83% of the assertions in this section referred to labels
+that no longer exist.
 
-### A. Changes what the code computes
+Several of the things it reported are fixed in the current version:
 
-**1.3.1 — p.5, Definition 2.2: the leading `σ`. Confidence: CONFIRMED analytically and numerically. This is the only paper-level item that changes shipped output.**
+- the leading `sigma` in Definition 2.2 is **gone** (p. 5 now reads
+  `v^{E,sigma}_l(n) := (e^{-i sigma arccos(E/2a_l)})^n * ((2a_l)^2 - E^2)^{-1/4} * e_l`)
+- `[AW21]` "Actosun" is corrected to "Aktosun" (p. 28) and is now cited in the body (p. 20)
+- the `(I x J)^2` typo is fixed -- p. 11 reads `(I x I_r)^2`
+- `[BS25]` is gone from paper 3 entirely
+- Proposition 3.2.6 does not exist; that argument was replaced
 
-```
-v^{E,σ}_l(n) := σ · ( e^{−iσ arccos(E/2a_l)} )^n · √( −(d/dE) arccos(E/2a_l) ) · e_l
-```
-The algorithm spec's step 8 and `eigfunc.py:76` both omit the leading `σ`. Three separate consequences, and the first two are the opposite of what an earlier audit concluded:
+Label changes worth knowing, since the rest of this repo cited the old ones:
 
-- **It is NOT load-bearing for unitarity.** In Lemma 3.1.2 (p.6) it enters as `σσ̄ = σ² = 1` and cancels between the first and second displayed lines. Delete it from *both* Def 2.2 and Def 3.1.1's `Φ` and the proof goes through verbatim. Measured: `‖F₀f‖²_K` = 70.29856917364579 **with** and 70.29856917364579 **without** — bit-identical, against `‖f‖²_{ℓ²}` = 70.298569173658. **Do not tell him the σ is needed for unitarity; he will check Lemma 3.1.2, watch it cancel, and conclude the reading was wrong.**
-- **It IS needed for Theorem 3.1.4(b)**, i.e. for internal consistency between Def 2.2's `v` and Def 3.1.1's `Φ`, which carries the same leading `σ`. Drop it from one and not the other and 3.1.4(b) is false.
-- **It changes `S^E` by an order-one amount.** Provable, not just measured: `w^{noσ} = σw` (Thm 2.4(c) is linear in `v`), so as row vectors `R^{noσ}_± = R_± D` with `D = diag(σ)`, `D² = 1`, hence `S^{noσ} = D S^E D` — **the sign of every block joining `σ ≠ σ′` (the reflection blocks) flips; the transmission blocks are untouched.** Two independent runs: `‖S_noσ − D S D‖ = 0.000e+00` at **every** energy tested, while `‖S_noσ − S‖ = 0.96–2.64` against `max|S| = 0.65–0.83`.
-- **For step 10 with a fixed `f`, adding the leading `σ` is exactly negating `f_{l,−}`.** Invisible for a one-sided packet (measured `0.0`), order-one for a balanced one (measured `max|Δψ|/max ψ = 1.297`). **Consequence for `Ω_±`, `S`, and any state-derived `f`: none**, since `σ² = 1` cancels between `F₀` and `F_±^*`.
-
-### B. Unproven gaps
-
-**1.3.2 — p.23, Definition 4.2: the paper's headline claim rests on two unfilled citations. Confidence: CONFIRMED verbatim at 4×.** The text reads `Definition 4.2. (cf. [BS26b, TODO,TODO])`, and Theorem 4.3 (p.24) is `([BS26b, TODO])`. The abstract promises "the scattering matrix coincides with a unitary matrix introduced in a previous work" and p.25 concludes "proving that it is, in fact, the scattering matrix" — the *entire* bridge from paper 3's `S^E` to paper 2's is that parenthetical. Paper 3 never touches Jost solutions, transfer matrices, or paper 2's `M^E_σ`/`N^E_σ`; it uses only the abstract change-of-basis property.
-
-**What paper 3 does prove is airtight and was confirmed end-to-end.** Brute-force `Sψ₀ = lim_{t→+∞} e^{itH₀}e^{−itH}Ω₊ψ₀` versus `F₀^*(∫^⊕ S^E dE)F₀ψ₀` (L=1, a=1, V(0)=0.8, 801-site lattice, right-moving Gaussian, T=45, stable vs T=60 at 8.1e-16): **rel max-diff 2.44e-14**. Controls: `S^E → 1` gives 0.752; `S^E → (S^E)^*` gives 1.394. So **Theorem 4.4(b) is confirmed non-tautologically**, and the direction of Def 4.2 (`w₊ = w₋S^E`, not the adjoint) is pinned. What is unverified is only "paper 3's `S^E` = paper 2's `S^E`".
-
-**The risk is lower than "headline claim unproven" suggests, and the framing should say so.** Paper 2's Def 4.1.6 + Rem 4.1.7 + Prop 4.2.1 supply exactly the three ingredients the two TODOs need, and two independent consistency checks point the same way: (i) paper 2's normaliser `⟨e_k|ω^{E,−}e_k⟩^{-1/2} = (2a_k Im z_{−,k})^{-1/2} = (4a_k²−E²)^{-1/4}` is **identical** to paper 3's `√ν_l = (−d/dE arccos(E/2a_l))^{1/2} = (4a_l²−E²)^{-1/4}`; (ii) paper 2's domain `[−2a₁,2a₁]∖(σ(2A)∪σ(−2A)∪D)` matches `ℝ∖𝔇̄` given Thm 2.4(a). The residual gap is narrow and specific: paper 2 pairs `(b^{E,σ}_{−σ})_σ` against `(b^{E,σ}_{+σ})_σ` — grouped by **side** — while paper 3 pairs `(w_{l,+})` against `(w_{l,−})` — grouped by **branch**. The unstated link is `w^{E,σ}_{l,±} ≐ σ√ν_l · b^{E,σ}_{∓σ,l}`, and **two independent reconstructions arrived at that same dictionary**. See §1.5 for the experiment.
-
-**1.3.3 — p.21, Proposition 3.2.6: the proof does not work, in two independent ways. Confidence: CONFIRMED (both, verbatim at 3.2×). This is the load-bearing lemma for Theorem 4.1.**
-
-*(a) Weak convergence does not give an a.e.-convergent subsequence.* The proof extracts, "By the Banach–Alaoglu Theorem", a **weakly** convergent subsequence with limit `G ∈ K`, then writes:
-> *"This implies the existence of a subsequence `(f̄ F_± V(H_0−E±iε_{n_{k_m}})^{-1}g)_m` that converges almost everywhere pointwise to the function `f̄G` (see [Ru86, Thm. 3.12])"*
-
-The cited theorem requires `L^p` **norm** convergence. Weak convergence does not give it: `e^{inx} ⇀ 0` in `L²([0,2π])` while `|e^{inx}| ≡ 1`. **The repair is cleaner than deleting less:** the sequence is bounded in `K` and — by the proof's own *final* display, via Theorem 2.4(e) — already converges pointwise a.e. for each fixed `E ∈ [−2a_l,2a_l]∖𝔇`. Bounded in `L²` plus a.e. convergent implies weakly convergent to that limit (Egorov + uniform integrability). So Banach–Alaoglu, the double subsequence, and the Rudin citation can simply be **deleted**.
-
-*(b) The statement is not well-formed, and this is the deeper half.* The hypothesis reads *"Let `f ∈ K`, `g ∈ c₀₀(ℤ,ℂ^L)` **and `E ∈ [−2a₁,2a₁]∖𝔇`**"*, but in the conclusion
-`lim_k ∫_K f̄(E)(F_± V(H₀−E±iε_{n_k})^{-1}g)(E) dE`
-**`E` is a bound integration variable.** The same symbol does two jobs: the fixed spectral parameter inside the resolvent, and the integration variable. Tracing the use site settles which is meant: Eq. (16) on p.23 arises from `⟨F_±f | e^{isM_Id}F_±Ve^{−isH₀}g⟩e^{±εs}`, where the `E` in the exponent came from `e^{isE}` — so **the application needs the diagonal reading**, `X ↦ (F_±V(H₀−X±iε)^{-1}g)(X)`. Under the fixed-`E` reading the first paragraph is correct but proves the wrong statement; under the diagonal reading the statement is right but the boundedness step is not justified, because Thm 3.1.5(b) gives `sup_{E∈F}‖G^{E,σ}_K(·,j)‖_∞ < ∞` only for **compact** `F ⊆ ℂ̄_σ∖𝔇`, and `[−2a₁,2a₁]∖𝔇` is not compact in `ℂ̄_±∖𝔇` (since `{±2a_l} ⊆ 𝔇`). The actual hole is a uniform-in-`ε` `K`-bound for the diagonal family, presumably via localisation to compact `I ⊆ ℝ∖𝔇̄` — for which Lemmas A.1/A.2 are already in the paper. **UNSURE which repair he intends; this is the sharpest question on the list.**
-
-**1.3.4 — p.5, Definition 2.2 is stated for all `E ∈ ℝ` but is undefined at the thresholds. Confidence: CONFIRMED, minor.** `B^E := {l : E ∈ [−2a_l, 2a_l]}` uses **closed** intervals, so `l ∈ B^E` at `E = ±2a_l`, where `−d/dE arccos(E/2a_l) = (4a_l²−E²)^{-1/2} = +∞`. Prop 2.3 (p.5) restricts to `ℝ∖{±2a₁,…,±2a_L}`; Def 2.2 does not. It is the definition the varying-multiplicity story hangs on and should carry the same exclusion.
-
-**1.3.5 — p.23/24, the index ordering of `S^E` is never fixed. Confidence: CONFIRMED, but DOWNGRADED to "please state it" — it is now self-answerable.** `S^E ∈ ℂ^{2|B^E|×2|B^E|}` and `(Ψf)(E) = (f_{l,σ})_{l∈B^E, σ∈{+,−}}`, with no ordering of the pair index `(l,σ)`. Every statement in paper 3 is invariant under simultaneous permutation, so this is not fatal; and **paper 2's Def. 4.1.6 fixes it** — `S^E` is displayed there as a 2×2 block matrix in `σ` with `|J^E|×|J^E|` blocks in `k`, i.e. **σ-major, l-minor**, corroborated by Rem 4.1.7's row vectors. Using that ordering, Eq. (17) holds by least squares to `≤3.1e-15` and `S^E` is unitary to `1.2e-14`. Since `a₁ ≥ … ≥ a_L`, `B^E` is always an initial segment, so only the `l`-vs-`σ` interleaving was ever open.
-
-### C. Editorial / typos
-
-- **p.9, Lemma 3.1.6(b) proof: "`We consider the compact set F := I + σ i[0,1]`"** — `σ` is the *component* index of `(·)_{l,σ}`; the branch is written `±`, and part (a) needs `F ⊆ ℂ̄_±∖𝔇`, which fails if `σ = −1` while the branch is `+`. Must be `F := I ± i[0,1]`. The correct form appears twice on p.14. Confirmed visually at 3.2×.
-- **p.9, Lemma 3.1.6(a) proof:** inside `sup_{X∈J}` the radical still reads `−d/dE arccos(E/(2a_l))` — `E` where it should be `X`, twice in the same display. Confirmed at 3.2×.
-- **p.10, Lemma 3.1.6(c) proof:** "`⊆ {((E,X),(E′,X′)) ∈ (I×J)² : …}`" — the set constructed two lines above is `I × I_r`, not `I × J`; `J` plays no role in (c). Confirmed at 4×.
-- **p.11, Lemma 3.2.3:** "let `I ⊆ ℝ∖𝔇` **by** a compact subset" → "be". Confirmed at 4.5×.
-- **p.16, Prop 3.2.4(b):** "no singular **continuos** spectrum". Confirmed at 4.5×.
-- **p.17, Eq. (9)** cites the **Monotone** Convergence Theorem for `χ_{I_n} ↓ χ_I`, a *decreasing* sequence. *Substantially downgraded:* the decreasing form of MCT is a genuine standard theorem given an integrable first term, which Eq. (8) supplies, and the original list's supporting claim ("MCT is used correctly ten lines later for the increasing `O_n`") is **wrong** — that second use (p.18) is applied to a *decreasing* sequence of open sets too. The author is consistent. Reduce to: "if your MCT is the increasing one, add 'dominated' or 'by continuity from above'."
-- **p.24, Theorem 4.4(a)'s "and thus"** silently uses `S^E(S^E)^* = 1`, i.e. Theorem 4.3. *Downgraded to editorial:* Thm 4.3 is stated **eleven lines earlier on the same page**, and the sentence after it already says the direct integral is unitary. Cite it inline; not a gap. (Unitarity independently reconfirmed twice: `‖S^*S − 1‖ ≤ 1.2e-14`, `|det S^E| = 1.000000000000`.)
-- **p.20, Theorem 3.2.5(c)** uses the bounded functional calculus while citing only (b) (the *unbounded* intertwining `F_±H = M_Id F_±`). *Downgraded to editorial:* `H = H₀ + V` is **bounded**, so (b) iterates to `F_±H^n = M_Id^n F_±`, then polynomials → Stone–Weierstrass → bounded Borel `φ` by a monotone-class argument. One line to say why. (The route "via the resolvents" suggested in the first pass is unnecessary here.)
-- **p.2 vs p.3:** the intro calls `H₀` "the discrete Laplace operator composed with the **left multiplication** by an invertible matrix `A`", while §1 defines `(H₀φ)(n) = A*φ(n+1) + Aφ(n−1)`. These agree only when `A = A*`; the `A*/A` form is the right one (verified: `⟨ψ,H₀φ⟩ = ⟨H₀ψ,φ⟩` holds for any `A` in the `A*/A` form, and only for `A = A*` otherwise). One-line intro nit. ("energy shift of the discrete Laplace operator" is itself correct.)
-- **p.3, `{a₁,…,a_L} = σ(A)`.** *The original "this is simply false" claim is REFUTED* — the sentence reads "*after conjugation by a suitable unitary operator, we can, without loss of generality, **assume that** `A = diag(a₁,…,a_L)` with `{a₁,…,a_L} = σ(A)` and `a₁ ≥ … ≥ a_L > 0`*", and "assume that" governs the whole clause, so `σ(A)` is the spectrum of the *post*-conjugation `A`. The WLOG itself checks out by hand (conjugate by `U*`, then gauge by `(Wφ)(n) = diag(e^{inθ_l})φ(n)` with `λ_l = |λ_l|e^{iθ_l}`; `V(n) ↦ diag(e^{inθ})V(n)diag(e^{−inθ})` stays self-adjoint with the same norm). At most: add a parenthetical "(the new `A`; the `a_l` are the moduli of the original eigenvalues)". **Do not send `A = diag(i,1)` as a counterexample** — after the gauge that `A` is `diag(1,1)`.
-- **`ℂ_σ` is never defined in paper 3** (used 9×). *But do not ask "open or closed?"* — **all 9 occurrences carry a closure bar, `ℂ̄_σ` / `ℂ̄_±`**, which the text layer drops. The question is already answered by the notation; the only defect is the missing one-line definition in §1. Also undefined (standard, but undefined): `c₀₀`, `M_Id`, `P_ac`, `P_pp`, `σ_pp`, `P_I(H)`, `U(H)`. (`λ₁` is introduced inline on p.14.)
-- **8 unfilled `[TODO]` citation brackets (10 tokens):** p.3 ×2 (incl. "*This decay condition is optimal*", and the unitary reduction of `A`), p.5 ×2 (Prop 2.3, Thm 2.4), p.8 (Thm 3.1.5), p.23 (Def 4.2), p.24 (Thm 4.3), p.26 (acknowledgment).
-- **p.2 forward reference:** the intro states `F₀H₀F₀^* = ∫^⊕ E·1 dE` and `F₀SF₀^* = ∫^⊕ S^E dE`, but the isomorphism `Ψ` that makes those parse is only built on p.24. *Downgraded to trivial* — the displays are correctly attributed on p.3 to Theorems 3.1.4 and 4.4(b).
-
-### D. Two claims to strike, and one convention to reassure him about
-
-**REFUTED — do not send: "Theorem 2.4 never says `D` is closed."** The paper writes **`𝔇̄`** — closure — in precisely and only the places where closedness is needed. Confirmed at 4× and by a programmatic scan for `\overline` rules, which finds **14 bars over `𝔇`** (and 9 over `ℂ`) that no text layer reproduces:
-- **p.5, Theorem 2.4(b) reads "`𝔇̄` is at most countable"**, not "`𝔇` is at most countable".
-- p.17: "*for every compact subset `I ⊆ ℝ∖𝔇̄`, by Lemma A.1, …*" — Lemma A.1's hypothesis "let `𝔇 ⊆ ℝ` be closed" is instantiated at `𝔇̄`, closed by construction.
-- p.18 alone carries **11 bars**: "for every open subset `O ⊆ ℝ∖𝔇̄`", "`P_{𝔇̄}(H) = P_pp(H)`", "For the open set `O = ℝ∖𝔇̄`", "the set `𝔇̄` is at most countable and therefore a Lebesgue zero-set", etc.
-
-Count: 14 `𝔇̄` vs 32 plain `𝔇`, and the split is exactly the mathematically correct one — `𝔇̄` closed + countable ⇒ nowhere dense, Lebesgue-null, `ℝ∖𝔇̄` open dense of full measure, which is everything Prop 3.2.4 needs. The plain-`𝔇` uses (Lemma 3.1.6(c), Lemma 3.2.3(a)) need only `dist(I,{±2a_l}) > 0`, which follows from `{±2a_l} ⊆ 𝔇` and `I` compact. **The author is being careful, not sloppy.**
-
-**REFUTED — do not send: the `I` / `𝓘` symbol collision in Lemma 3.2.3(a)'s proof.** At 3.2× the number is calligraphic `𝓘` and the compact set is italic `I`; they are plainly distinct on the page. The collision exists only in the text layer.
-
-**Proposition 1.2's reversed `∓` is deliberate and correct — reassure him, and ask only for a footnote.** p.4 verbatim: *"The wave operators `Ω_± := s-lim_{t→∓∞} e^{itH}e^{−itH₀}` exist and are complete…"*, with `S = Ω_-^*Ω_+`. Three independent confirmations:
-1. **Internal consistency, by hand.** Eq. (15)'s `t → ∓∞` gives `∫_0^{∓∞} … e^{±εs}ds`. For the `+` branch (`t→−∞`, `e^{+εs}`), `s = −u`: `∫_0^{−∞} i e^{−is(H₀−E+iε)}ds = −i∫_0^∞ e^{iu(H₀−E)}e^{−εu}du = (H₀−E+iε)^{-1}` — **exactly the sign in Eq. (16)**, and exactly the sign Prop 3.2.6 is stated for. The other convention produces `∓iε` and Prop 3.2.6 no longer applies.
-2. **It pairs `Ω₊` with the retarded eigenfunctions.** Thm 2.4(c) defines `w_{l,+} := lim (H−E−iε)^{-1}(H₀−E−iε)v`, i.e. the resolvent at `z = E + iε` — the upper half-plane / Lippmann–Schwinger `ψ^{(+)}` state. `Ω^{in}` built from `ψ^{(+)}` is the textbook pairing, and the `∓` chain locks Prop 1.2 ↔ Eq. (16) ↔ Thm 2.4(e) ↔ Thm 2.4(c) together.
-3. **Measured.** L=1, a=1, V(0)=0.8, 601-site lattice, right-moving Gaussian, T=40 (stable vs T=60 at 4.6e-16; `flow(ψ₀,0) = ψ₀` to 8.6e-16; free centre-of-mass at `t = 0/+5/−5` = `0/+9.93/−9.93`):
-
-| | vs `F₊^*F₀ψ₀` | vs `F₋^*F₀ψ₀` |
-|---|---|---|
-| `Ω₊` = flow at `t = −40` | **2.52e-14** | 5.92e-01 |
-| `Ω₋` = flow at `t = +40` | 5.92e-01 | **2.60e-14** |
-
-So Theorem 4.1 is confirmed and consistent with Prop 1.2's `∓`. **The only defect is presentational**: it is reversed relative to Yafaev / Amrein–Jauch–Sinha / most physics texts, which write `W_± = s-lim_{t→±∞}`. One sentence naming the source convention saves every reader the check. *(The attribution to [RS79] is UNSURE — see §4.)*
-
-### E. Theorems checked against the code and confirmed
-
-| Statement | measured |
+| old | current |
 |---|---|
-| Thm 3.2.5(b) `F_±H = M_Id F_±` (the licence for `e^{−itE}` in step 10) | `7.2e-15` abs against scale 4.53 → 1.6e-15 rel; `F₀` version 2.4e-15 |
-| Thm 3.2.5(a) `F_±^*F_± = P_ac(H)` | `≤4.1e-10` (θ-quadrature at band edges) with a bound state present; the gap to `‖f‖²` is 0.27–0.98, so the theorem is being tested, not trivially satisfied |
-| Thm 2.4(d) `(H−E)w = 0`, both branches, five energies | `6.0e-15` |
-| Thm 4.4(a) pointwise: `(F₊f)(E) = (S^E)^*(F₋f)(E)` | `≤4.9e-15` against scale 1.45–3.50 |
-| Thm 4.3 unitarity | `‖S^*S−1‖ = 2.2e-16 … 1.2e-14`, `|det S^E| = 1.000000000000` — **but only with the `σ√ν_l` normalisation**; the change of basis between *unnormalised* `w`'s is not unitary |
-| `outer_sign = +1` ↔ `w_{l,+}` (retarded) | clean `O(ε)`: `4.15e-3 / 4.17e-5 / 4.17e-7` at `ε = 1e-3/1e-5/1e-7`, vs `0.548` flat for the crossed pairing; `L=2` version `8.9e-3/9.0e-5/9.0e-7` vs `0.87`. Built from an *exact infinite-lattice* Krein-updated resolvent, validated against an 801-site lattice at 2.6e-16. |
+| Thm 2.2.5 (`F*F = P_ac`) | **Theorem 3.2.5(a), p. 20** |
+| Thm 4.1 (`Omega_pm = F*_pm F_0`) | **Theorem 4.3, p. 24** |
+| Def 4.2 (`S^E`) | **Definition 4.4, p. 25** |
+| Thm 4.3 (`S^E` unitary) | **Theorem 4.5, p. 25** |
+| Thm 4.4 (`F_- = (int S^E dE) F_+`) | **Theorem 4.6(a), p. 26** |
+| Def 3.1.1 (`Phi`) | **Definition 3.1.3, p. 7** |
 
----
+Nothing has been re-audited against the new version. If paper-3 errata are wanted again,
+that is a fresh pass against the 2026-08-14 file, not a patch of what was here.
 
 ## 1.4 The algorithm spec — `docs/MaxwellAlgorithm.pdf`
 
@@ -385,7 +333,7 @@ Three genuine math errors, all already corrected in the code under his April rul
 - **Data (e) permits the closed interval `[a,b] ⊆ [−2a_L, 2a_L]`, on which step 1 is ill-posed.** At `E = ±2a_l` the quadratic has the double real root `z = ±1`, so "the solution with `Im(z) > 0`" does not exist and step 3 divides by zero. Must be `⊂ (−2a_L, 2a_L)`. ("There will be two complex-valued solutions" is also false at the endpoints.) `model.py:99` + `quadrature.safe_open_band_interval` enforce this with a `1e-3` buffer — an undocumented fifth deviation from the written contract.
 - **`A` is used in step 6 and never defined anywhere in the document.** Neither is `H`, `H₀`, nor the equation `ψ` solves. `K` is never introduced (it first appears as the subscript of `j_K`), `e_l` is never defined, step 10's `|·|²` on a `ℂ^L`-valued quantity is never explained, and step 7 inverts `W^{E,σ}_±` with no invertibility hypothesis. **Since `ψ` is meaningless without `A` and `H`, this is the largest omission in the document.**
 - **Missing `1/(2π)`.** Paper 3 §3 p.6, Thm 3.1.4(b) and Def 3.2.1 p.11 put `1/√(2π)` in `F`, `F₀` and `F_±`; `|F_±^*f|²` therefore carries `1/(2π)`. Literal spec total `Σ_n ψ = 6.283185307134` (= `2π` to 11 digits); with `evolve.py:114`'s `/(p·2π)`, `0.999999999993`, constant across `t = −8, 0, 8`, both `V = 0` and `V = 0.8`, both branches.
-- **Step 8 sums `l = 1,…,L` unconditionally**, where paper 3 restricts to `l ∈ B^E`. Consistent only because Data (e) forces `B^E = {1,…,L}`. Corollary worth telling him: **the spec as written cannot express the varying-multiplicity regime the three papers exist to describe.**
+- **Step 8 sums `l = 1,…,L` unconditionally**, where paper 3 restricts to `l ∈ B^E`. Consistent only because Data (e) forces `B^E = {1,…,L}`. Corollary worth telling him: **the spec as written cannot express the varying-multiplicity regime the papers exist to describe.**
 - Cosmetic: step 2 omits `and E ∈ [a,b]` from its quantifier list though `E` is free in the formula; `:=` vs `=` inconsistent across steps.
 
 **Not defects — verified, so nobody "fixes" them.** Step 2's `∓` in `z_l^{∓n}` is deliberate and load-bearing (it converts the spec's `Im z > 0` root back to the papers' `Z_σ^n`; see §3). Step 6's missing `i` is harmless — `W_spec = −i W_paper`, and paper 2's `G` carries a compensating explicit `i` that the spec also drops, so `i(W_paper)^{-1} = (W_spec)^{-1}` exactly. Step 6's `E` rather than `Ē` is harmless on real `E`. Step 7's `n > j_k` / `n ≤ j_k` split is unambiguous *and* immaterial (paper 2 Lemma 3.1.2: the two expressions agree at `n = j`; measured `2.2e-15 … 5.1e-15`). Step 5's induction is well-founded. Anchoring step 6 at `N, N+1` is legitimate (paper 2 Prop 2.3.3; measured anchor-independence `1.3e-15 … 9.3e-15`).
@@ -406,49 +354,26 @@ Three genuine math errors, all already corrected in the code under his April rul
 
 ---
 
-# 2. Questions to send him
+# 2. Questions to send him — REMOVED 2026-08-24
 
-Twelve, deduplicated across all four documents, ranked by how much they block work. Each is answerable in one or two sentences. Page references are to the PDFs as supplied.
+The twelve questions here were written 2026-08-21. Five were defective by 2026-08-24 and
+two of those would have been actively embarrassing:
 
----
+- **Q6** asked whether the code should carry the leading `sigma` from paper 3's
+  Definition 2.2. He removed that `sigma` himself on 2026-08-14.
+- **Q7** asked which repair he intended for Proposition 3.2.6. That proposition is not in
+  the paper any more; he replaced the argument, and the replacement is the same route the
+  question recommended.
+- **Q1** asked what `(cf. [BS26b, TODO,TODO])` points to in the old Definition 4.2. Every
+  reference in it needs rewriting against the new numbering.
+- **Q11** and **Q12** each carry a sentence that no longer holds.
 
-**1. Paper 3, p.23, Definition 4.2 — which numbered results does `(cf. [BS26b, TODO,TODO])` point to?**
-This is the only link between paper 3's `S^E` and paper 2's, and it is the paper's headline claim. My best reconstruction is `[BS26b, Def. 4.1.6 + Rem. 4.1.7]` for the definition and `[BS26b, Prop. 4.2.1]` for unitarity. Is the intended identification `w^{E,σ}_{l,±} = σ√ν_l · b^{E,σ}_{∓σ,l}`? (Paper 2 groups its bases by *side*, `(b^{E,σ}_{−σ})_σ` vs `(b^{E,σ}_{+σ})_σ`; paper 3 groups by *branch*, `w_{l,+}` vs `w_{l,−}` — that regrouping is what the two TODOs have to supply.) Encouragingly, the normalisers already coincide exactly: `⟨e_k|ω^{E,−}e_k⟩^{-1/2} = (4a_k²−E²)^{-1/4} = √ν_k`.
+Rather than patch a list where five of twelve are wrong, it is deleted. A question list is
+the one artifact here that goes straight to the author, so it should be rebuilt from the
+current papers when it is actually about to be sent -- not carried around stale.
 
-**2. Paper 1, p.18, Definition 3.4 — should `C_E` be `((Z_σ − Z_σ^{-1})(1 − P^E_=) − Z_σ P^E_=)^{-1}`?**
-Recomputing the Wronskian on p.35, the `P^E_=` coefficient is `(2n−1)a_kε_k − En = −a_kε_k` with `ε_k = ±1` the eigenvalue of `Z_σ` there, which gives `−AZ_σP^E_=` rather than `−AP^E_=`. The two agree for `E > 0` and differ by a sign for `E < 0`; numerically `(H₀−E)K̃^σ_ψ − δ_j` is `2.000` at `E = −2a_2` with the printed `C_E` and `9e-16` with the corrected one, so Prop 3.6(b) fails at every negative threshold as printed. (Related and minor: `C_E` changes sign with `σ` on the open channels, so `C^σ_E` might read better.)
-
-**3. Paper 1, p.18, Definition 3.4 — `P^E_1` is never defined in the paper.**
-Am I right that it is the orthogonal projection onto the *strictly open* channels `{e_k : |z_σ(E/a_k)| = 1, E/a_k ≠ ±2}`, so that `P^E_1 P^E_= = 0`? That is the only reading under which `‖Z_σ(1_L − P^E_= − P^E_1)‖ < 1` (p.37) and `ψ^{E,σ}_+(n)^{-1}P^E_1 = ϕ^{E,σ}_+(n)` (p.33) both come out true. Definition 3.4 cannot be evaluated without it.
-
-**4. Paper 2, p.21, Equations (14) and (15) — should every `σ` on the right-hand sides be `−σ`?**
-As printed, the RHS of (14) computes `Φ^E_{−σ}b` and of (15) `Ψ^E_{−σ}b`. The origin looks like the first display on p.23, which expands `G^{E,−σ}_{H₀}(·,n)` using Definition 3.1.1 with label `σ` instead of `−σ`. Corrected, they match Eqs (16)/(17) to `5e-16`; as printed they are off by 0.36–1.5 (L=1, 2 and 3, open and mixed channels). **Note that Theorem 3.2.1(c) and (d) are unaffected** — the swap is consistent across the two displays, so the composition `Ψ∘Φ` is still the identity to `2e-16`. Two smaller things in the same proof: the Wronskian identity on p.23 should have subscript `H₀`, not `H` (exact with `H₀`, off by `‖V‖` with `H`); and the `[TODO]` in step (c) needs `b = Σ_± m^{E,−σ}_{H,∓}((W^{E,σ}_{H,±})^{-1})^* W(m^{E,σ}_{H,±}, b)`, which I verified to `4e-14` but could not find stated anywhere.
-
-**5. Paper 2, p.15, Definition 3.1.1 — what are `O^σ_α` and `𝔇`?**
-Neither is defined in paper 2. I read `O^σ_α` as paper 1's Definition 3.5 — is that right, and should the `α` be tied to the growth condition on `V`? And is the Fraktur `𝔇` the set `D̃` of Cor 4.2.3(b) (where `W(q^E_∓, q^E_±)` fails to be invertible), rather than the roman `D` of Def 2.2.3 that Def 4.1.6 and Prop 4.2.1 use? Lemma 2.3.9 with `B = C = 1_L` already shows `{E : W^{E,σ}_{K,τ} ∉ GL_L}` is discrete, which is exactly what a one-line definition of `𝔇` would need — and it would also make explicit that the thresholds are excluded (`W^{E,σ}_{H₀,τ} = τω^{E,σ}` is singular exactly at `E = ±2a_k`; I hit `cond W_{H₀} = inf` at `E = 2a₂` in a test run). Theorem 3.2.1(d)'s `𝔇′` — the complement?
-
-**6. Paper 3, p.5, Definition 2.2 — should the algorithm's step 8 carry the leading `σ`?**
-I've now checked what it does and does not do: it is **not** needed for unitarity (in Lemma 3.1.2 it enters as `σσ̄ = 1` and cancels; `‖F₀f‖²_K` is bit-identical with and without it), but it **is** needed for Theorem 3.1.4(b) to match Definition 3.1.1's `Φ`, and it conjugates `S^E` by `diag(σ)` — flipping the sign of every `σ ≠ σ′` block while leaving the transmission blocks alone (`‖S_noσ − D S^E D‖ = 0` exactly, `‖S_noσ − S^E‖ ≈ 1.0–2.6` against `max|S^E| ≈ 0.7`). For step 10 with a fixed `f` it is exactly "negate `f_{l,−}`". Should the code carry it? Separately: Definition 2.2 is stated for `E ∈ ℝ` with `B^E` built from **closed** intervals, but `√(−d/dE arccos(E/2a_l))` is infinite at `E = ±2a_l` — should Def 2.2 exclude the thresholds the way Prop 2.3 does?
-
-**7. Paper 3, p.21, Proposition 3.2.6 — which repair do you intend?**
-Two things. (a) The proof gets a *weakly* convergent subsequence from Banach–Alaoglu and then cites [Ru86] for an a.e.-pointwise subsequence, but that theorem needs `L^p` **norm** convergence and weak convergence does not give it (`e^{inx} ⇀ 0` in `L²` while `|e^{inx}| ≡ 1`). The last display of the same proof already gives honest pointwise convergence in `E` via Thm 2.4(e), and "bounded in `L²` + a.e. convergent ⇒ weakly convergent" would let you delete Banach–Alaoglu, the double subsequence and the citation outright — is that the intended route? (b) The hypothesis says "*and `E ∈ [−2a₁,2a₁]∖𝔇`*", but in the conclusion `E` is a bound integration variable; the object Eq. (16) actually needs is the **diagonal** `X ↦ (F_±V(H₀−X±iε)^{-1}g)(X)`. Under that reading the missing piece is a uniform-in-`ε` `K`-bound for the diagonal family — Thm 3.1.5(b) only gives it on **compact** `F ⊆ ℂ̄_σ∖𝔇`, and `[−2a₁,2a₁]∖𝔇` is not compact. Is the fix a localisation to compact `I ⊆ ℝ∖𝔇̄` via Lemmas A.1/A.2?
-
-**8. Paper 2, §4.1 — I believe your outstanding sign edits are correct, and the "sign problem" title can come off.**
-I rebuilt §4 independently (transfer-matrix Jost solutions and an asymptotic mode decomposition for the basis of `B(H,E)`, no use of the paper's formulas) at L=1, L=2 and L=3, all-open and mixed. Lemma 4.1.3 is correct exactly as printed (`W(b^{E,σ}_τ, b^{E,σ}_τ) = −σ1`; `+σ1` is off by exactly 2). The struck `−σ → σ` in Lemma 4.1.5(b) is **right** (`|W − σN| ≤ 1.7e-13`; `|W + σN| = 1.1–26`), so please accept that edit. 4.1.5(a),(c),(d), Prop 4.2.1 (`‖S^*S−1‖ ≤ 8.7e-14`), Rem 4.1.7 and Prop 4.2.2 (including the `τσ` label) all check out. Also: the note *"I do not understand this argument"* on p.26 is on the **basis claim**, and I think it is fine — Cor 2.2.5(a) gives a linear injection `B(H₀,E) → B(H,E)` for each `τ` (injective by Thm 2.2.4(b)), which maps a basis to a basis; Def 4.1.4's decompositions have residual `≤1.4e-15` in every case I ran. And your own p.30 question, "*What do you do with the inverse of `M^E_σ`?*", does look like a real gap: Cor 4.2.3(b)'s continuation needs `det M^E_σ ≠ 0` off the real axis, but the invertibility comes from Lemma 4.1.5(d)'s proof, which uses `W(b,b) = −σ1`, valid only for real `E` — so `D̃` should also exclude the zeros of `det M^E_σ`.
-
-**9. Paper 1, p.24, Proposition 4.6 and the shape of §4.**
-The proof is `...[TODO]` twice. Beyond that: does §4 need a hypothesis relating `sup_{|Y|<r} α_σ` to the potential's decay rate `ε`? Shrinking `r` alone doesn't seem to do it, because at a threshold `α_σ(E) = ‖Z_σ^{-1}‖ ≤ τ_A` with equality possible, while Definition 1.1 permits `ε = τ_A` exactly — which is presumably the same balance the p.20 `[TODO]` is about. And is the intended conclusion of §4 the corollary that `E ↦ u^{E,σ}_τ(n)` extends holomorphically in `Y = √(E−E₀)` across a threshold? The section currently stops before stating it. Separately, in Lemma 4.1 (p.22): should `r := √dist(w, {−2,2})` be the distance to the two branch **cuts** `±2 + σi(−∞,0]` rather than to the two branch **points**? For `w = 1 − 10i`, `σ = +`, the printed radius gives `r² = 10.05` while the cut point `2 − 10i` is at distance 1, and `z_σ` jumps by 10.38 there (it isn't even defined on the ray). The statement looks fine — only the radius.
-
-**10. Paper 2, pp.2–3 — what is the standing hypothesis on `A`, and where is `a_k` defined?**
-Section 1 has `(H₀φ)(n) = A*φ(n+1) + Aφ(n−1)` with `A` merely *invertible normal*, but Def 2.1.1 has `AΦ(n+1) + AΦ(n−1)`, and everything downstream uses the second form. In fact Prop 2.1.4(a), `A(Z_σ + Z_σ^{-1}) = E·1` with `Z_σ` diagonal, forces `A` to be **diagonal**, not just Hermitian, and p.12's `ω^{E,σ}e_k = −ia_k(…)e_k` presumes `Ae_k = a_k e_k`. Should the standing hypothesis just say `A = diag(a₁ ≥ … ≥ a_L > 0)`? And `a_k` is never defined anywhere in paper 2, though it is used from Def 2.1.3 on. Also, in Def 2.1.3, should `𝒮 := {|Re z| > 2a_L}` read `2a₁`? With `2a_L`, Prop 2.1.4(b)'s *strict* inequality fails (`a = (1.5,0.8)`, `E = 2.0 ∈ 𝒮` but `‖Z_σ‖ = 1` exactly) — though the alternative fix is to narrow (b)'s strict clause, and since Prop 2.1.4 is quoted from `[BS25, Prop. A.3.2]` the discrepancy may live there.
-
-**11. The two `±` branches in step 10 of the algorithm cannot give the same picture — what should `f` be?**
-Your paper 3 Thm 4.4(a) says `F_− = (∫^⊕ S^E dE)F_+` and Thm 4.3 says `S^E` is unitary; nothing says `S^E = 1`. So `ψ_+[f] = ψ_−[S^E f]`, and with a fixed `f` the two videos must differ whenever `V ≠ 0`. Measured, both branches separately normalised to 1 (to 1e-12): identical for `V = 0`; **28 %** different for one potential site, **35 %** for three; least-squares `w_{·,+} = w_{·,−}S^E` has residual `7.8e-16` with `‖S^*S−1‖ = 1.4e-15` and `‖S^E − 1‖ = 0.27`. Both branches are exact unitary eigenbases (`(H−E)w = 8e-16` for each), so the question isn't which is right — it's whether the user supplies `f` as fixed data (branches differ, and step 10's `±` needs binding) or as `f := F_β ψ₀` derived from an initial state (branches then agree to 1e-15). Relatedly, in your reply lines 51 and 52 cannot both stand: `z_l = e^{−i arccos(E/2a_l)}` has `Im z < 0`, so `ν_l = 1/(2a_l Im z_l)` is *negative* and `√ν_l` imaginary (measured `−0.389, −0.642`). The branch-free rewrite `ν_l(E) := 1/√((2a_l)² − E²)` makes step 3 agree with all three papers, the spec and the code simultaneously.
-
-**12. Bibliography — can I get `[BS25]`, and should the keys be reconciled?**
-Paper 2 cites `[BS25, Prop. A.3.2]`, `[BS25, Def. 2.1.4]`, `[BS25, Lem. 2.1.5(a)]`, `[BS25, Lem. 2.1.8]`, `[BS25, Cor. 2.2.3]`, `[BS25, Thm. 2.2.2(e)]` — every quoted proposition in §2 depends on it — but `[BS25]` carries no venue, year or arXiv number, and none of those pointers resolves against paper 1 as supplied (paper 1 has no Appendix A.3 and no §2.2.2; its counterparts are Def 2.3/2.6, Lem 2.5, Prop 2.7, Lem 2.12(d)(e), Thm 3.7, Lem 3.8). Paper 3 renames the same works `[BS26a]`/`[BS26b]`. Two small consequences: "Proposition 2.1.4(f)", cited four times in paper 2 (pp. 7 ×2, 15, 25), is I think **Proposition 2.1.9** — 2.1.4 is `[BS25, Prop. A.3.2]` and 2.1.9 is `[BS25, Prop. A.3.2(f)]`, so the source item letter got attached to the local number; and "Theorem 2.1.6(f)" on p.14 is presumably `[BS25, Thm. 2.2.2(f)]` by the same mechanism. Also, in both papers `[AW21]` reads "Actosun … Springer, 1979" — that should be **Aktosun**, **2021** (1979 looks copy-pasted from `[RS79]`), and `[AW21]` is cited nowhere in either body.
-
----
+Two questions from the old list survive scrutiny and are worth keeping in mind, both about
+paper 4 rather than paper 3; see the notes at the end of this file.
 
 # 3. Convention conflicts
 

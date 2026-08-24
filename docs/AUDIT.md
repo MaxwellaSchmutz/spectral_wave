@@ -12,6 +12,19 @@ audit and were not independently re-run — treat them as strong but second-hand
 audit.** It is the authoritative spec, it settles three questions the audit had to leave
 open, and it is read into every conclusion below.
 
+> **Revised 2026-08-24.** Two documents arrived after this audit was written:
+> `papers/4_Levinson.pdf` (12 Aug 2026, a draft in progress) and a **rewritten** paper 3
+> (14 Aug 2026, retitled *Wave and scattering operators…*, renumbered end to end).
+>
+> The **measurements** below — residuals, probability sums, transfer-matrix agreement,
+> preset behaviour — were re-checked and still hold. What changed is everything that
+> *cites a paper*: §4 is now archived as sent-and-answered, §6 steps 1 and 3 are closed or
+> moot, and §8 lost three items. Where this file names a theorem in paper 3, the label is
+> from the superseded version; `PAPER_NOTES.md` §1.3 has the mapping.
+>
+> Nothing here should be read as a statement about the Levinson result. That is an
+> unfinished draft the author is actively writing, and this audit predates it.
+
 ---
 
 ## 1. Bottom line
@@ -104,7 +117,22 @@ Both departures are authorized; both are documented in `README.md`.
 
 ---
 
-## 4. What to send Schober
+## 4. What was sent to Schober — SENT AND ANSWERED, archived 2026-08-24
+
+> **This is history, not a to-do list.** Items 1–3 were sent on 2026-08-21 and he answered
+> them the same day (see `professor_response.txt` and `../new_texts.txt`). He confirmed the
+> `S^E` reading verbatim: *"The two videos should differ by S^E, they should not be the
+> same!"* and *"you are starting with the same Fourier transform under two different Fourier
+> transforms, so if you transform back, you get two different states."*
+>
+> **Items 6–9 are dead and must not be re-sent.** They were written against the 27-page
+> paper 3 of 2026-08-21. That paper was rewritten on 2026-08-14 into a 28-page
+> *Wave and scattering operators…*: item 6's leading `σ` was removed by the author himself,
+> item 7's Proposition 3.2.6 no longer exists, and item 8's `[BS25]` is gone from paper 3.
+> Item 9's sub-items are against July 2025 copies of papers 1 and 2, while `4_Levinson.pdf`
+> cites 2026 revisions that are not in this repo.
+>
+> Kept as a record of what was asked and what came back.
 
 > Hi Jonas — I have the April 25 algorithm PDF now, thanks. Three things need your ruling,
 > then some paper questions. All numbers are max over the frame, relative to peak ψ.
@@ -245,10 +273,14 @@ the one line from his own spec: *"the solution with `Im(z) > 0`"*.
 
 ## 6. Where to look next
 
-**Step 1 — Get the ruling on the input convention.** *(Cost: one email; drafted in §4.)*
-Not really an investigation any more — the remaining uncertainty is about intent, not
-physics, and only Schober can resolve it. Everything below is contingent on his answer.
-**Do not start the rest until he replies.**
+> **Steps 1 and 3 are done or dead as of 2026-08-24.** Step 1 was answered: he confirmed
+> the branches are *supposed* to differ by `S^E`. Step 3 is moot — the leading `σ` it asks
+> about was removed from paper 3's Definition 2.2 in the 2026-08-14 rewrite, so there is
+> nothing to restore. Steps 2 and 4–6 are unaffected.
+
+**Step 1 — Get the ruling on the input convention.** ✅ **ANSWERED 2026-08-21.** He
+confirmed the two branches should differ by `S^E`, and that they would agree only if you
+started from the same *state* rather than handing the same `f` to both transforms.
 
 **Step 2 — Nail down which `S_E` the change-of-basis actually is.** *(~2 h.)*
 *Hypothesis:* the matrix extracted from `w₊ = w₋ S` equals the *physical* S-matrix read off
@@ -260,8 +292,12 @@ complex-Herm), the two extractions agreeing to 2.00e-15. *Why it matters:* this 
 **non-tautological** version of the test — the one that survives the random-unitary control.
 Reproduce it and make it a permanent test.
 
-**Step 3 — Decide whether the leading `σ` changes any delivered video.** *(~1 h. Worth doing
-before he rules.)* *Hypothesis:* restoring `σ` is equivalent to negating `f_{l,−}`, so it is
+**Step 3 — ~~Decide whether the leading `σ` changes any delivered video.~~ MOOT.** The `σ`
+this step asks about is no longer in paper 3: the 2026-08-14 rewrite states Definition 2.2
+(p. 5) as `v^{E,σ}_l(n) := (e^{−iσ arccos(E/2a_l)})^n · ((2a_l)²−E²)^{−1/4} · e_l`, with no
+leading factor. The code already matches. Original text below, struck.
+
+> *Hypothesis:* restoring `σ` is equivalent to negating `f_{l,−}`, so it is
 invisible for one-sided `f` and visible for balanced `f`. *Experiment:* run all 13 presets
 with and without, tabulate `max|Δψ|/peak`. *Prediction:* exactly 0 for every `right`/`left`
 preset, non-zero for every `balanced` one — **including both Schober presets**. *Kill
@@ -311,29 +347,30 @@ Items 1, 3 and the package rename were done on 2026-08-21; the rest are open.
 
 ## 8. Open questions nobody can currently answer
 
-1. **Fixed `f` or `f := F_±ψ₀`.** *Blocked on:* Schober. Determines whether `outer_sign`
-   should exist as a user-facing field at all. Both readings are implemented and measured
-   (14–65 % vs 4.3e-15). **Unblocked by:** one sentence.
-2. **The contents of `[BS25]`.** *Blocked on:* a document not in the repo. Consequence:
-   "Proposition 2.1.4(f)", cited four times in paper 2, resolves to nothing, and the explicit
-   computation of `J^E` — which fixes how many channels are open at each energy — is
-   unavailable. **Unblocked by:** the PDF, or a number map.
-3. **Whether paper 2's `S_E` (Def 4.1.6) is paper 3's `S_E` (Def 4.2).** *Blocked on:* a
-   proof in neither draft — paper 3 marks it `(cf. [BS26b, TODO,TODO])`, and its own abstract
-   calls this the headline theorem. Verified numerically for L=1 single-site (1.7e-14); that
-   is not the same as the identification.
+> Revised 2026-08-24 against `4_Levinson.pdf` and the rewritten paper 3. Items 1, 5 and 8
+> were **removed**, not answered: 1 was answered by Schober; 5 asked to settle a layout
+> that renders cleanly at 450 dpi and is quotable; 8 challenged the author's own convention
+> on no evidence beyond "unusual".
+
+1. **The contents of `[BS25]`.** *Blocked on:* a document not in the repo. Consequence:
+   "Proposition 2.1.4(f)", cited four times in paper 2, resolves to nothing. Note `[BS25]`
+   has been **removed from paper 3** in the rewrite; it survives only in paper 2
+   (pp. 2, 4, 5, 12, 30), which is itself a July 2025 file superseded by a 2026 revision
+   that is not here. **Unblocked by:** asking for the current papers 1 and 2.
+2. **Current versions of papers 1 and 2.** `4_Levinson.pdf` cites 2026 revisions of both,
+   but this repo holds the July 2025 copies. Every erratum in `PAPER_NOTES.md` §1.1–1.2 is
+   against a file the author has moved past. **Unblocked by:** the two PDFs.
+3. **Whether paper 2's `S^E` is paper 3's.** Both were renumbered; paper 3's is now
+   Definition 4.4 (p. 25). Paper 4 Proposition 4.2.3 (p. 26) gives
+   `det S^E = (−1)^{dim(P^E_> ℂ^L)} det(W^{E,−})/det(W^{E,+})`, which relates the
+   determinant but is not the identification of the matrices.
 4. **The final signs in paper 2 §4.1.** *Blocked on:* Schober's own unresolved edits. Lemma
    4.1.3 is titled "sign problem"; 4.1.5(b),(d) carry struck-through `−σ → σ`; a margin note
-   reads "I do not understand this argument."
-5. **Paper 2 Def. 4.1.6's matrix layout.** *Blocked on:* PDF extraction. **Do not cite until
-   rendered as an image.**
-6. **Test-suite §12.** *Blocked on:* nothing — it never existed in version control and must
+   reads "I do not understand this argument." Against the July 2025 copy — may be resolved
+   in the 2026 revision.
+5. **Test-suite §12.** *Blocked on:* nothing — it never existed in version control and must
    be rewritten, not recovered.
-7. **Behaviour at and beyond the channel thresholds.** *Blocked on:* nobody tested it. The
+6. **Behaviour at and beyond the channel thresholds.** *Blocked on:* nobody tested it. The
    spec's Data item (e) confines `[a,b]` to the common open band, so the shipped presets are
-   inside the tested envelope — but paper 3's varying-multiplicity content is entirely
-   unexercised.
-8. **Whether paper 3 Prop. 1.2's `Ω_± := s-lim_{t→∓∞}` is intentional.** The `∓` is reversed
-   relative to the textbook convention, and it decides which branch is the physically
-   intended "in" one. Confirmed present by two independent extractions, so not an artifact —
-   but unusual enough to be a typo.
+   inside the tested envelope — but the varying-multiplicity content the papers exist for is
+   entirely unexercised by this code.

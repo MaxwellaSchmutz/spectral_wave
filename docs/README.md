@@ -17,22 +17,31 @@ Two known defects in it, both raised with Schober and unanswered as of 2026-08-2
 
 ## The theory, in `papers/`
 
-Three drafts by Ballesteros Montero & Schober, July 2025. Read in order — each imports the
-previous one's main theorem as a black box.
+Four drafts by Ballesteros Montero & Schober. Read in order — each imports the previous
+one's main theorem as a black box.
 
-| | Builds | Key result |
-|---|---|---|
-| **`1_JostSolutions.pdf`** | the Jost solutions `u^{E,σ}_τ` | Thm 3.3 + 3.7: existence, uniqueness, analyticity in `E`, via a Neumann series on a Volterra kernel |
-| **`2_LimitingAbsorptionPrinciple.pdf`** | the Green's function, the LAP, the scattering matrix `S_E` | Lemma 3.1.4 + Thm 3.2.1: the resolvent kernel stays continuous down onto the real band |
-| **`3_GeneralizedFourier.pdf`** | the generalized Fourier transforms `F_±` | Thm 2.2.5: `F_±^* F_± = P_ac(H)`, `F_± H = M_E F_±`, `F_± F_±^* = 1`. Schober: *"The whole reason why you do what you do."* |
+| | Date | Builds | Key result |
+|---|---|---|---|
+| **`1_JostSolutions.pdf`** | 1 Jul 2025 | the Jost solutions `u^{E,σ}_τ` | Thm 3.3 + 3.7: existence, uniqueness, analyticity in `E`, via a Neumann series on a Volterra kernel |
+| **`2_LimitingAbsorptionPrinciple.pdf`** | 2 Jul 2025 | the Green's function, the LAP, the scattering matrix `S^E` | Lemma 3.1.4 + Thm 3.2.1: the resolvent kernel stays continuous down onto the real band |
+| **`3_GeneralizedFourier.pdf`** | **14 Aug 2026** | the transforms `F_±`, then `Ω_±` and `S` | **Thm 3.2.5(a), p. 20**: `F_±^* F_± = P_ac(H)`. Schober: *"The whole reason why you do what you do."* |
+| **`4_Levinson.pdf`** | **12 Aug 2026** | relates `det S^E` to the bound and half-bound states | Thm 4.2.4, p. 27 — **draft in progress** |
 
-The repo's `psi(n,t)` is the inverse of that last theorem — the eigenfunction expansion
-run backwards, with `e^{-iEt}` supplying the only time dependence.
+The repo's `psi(n,t)` is the inverse of paper 3's expansion theorem — run backwards, with
+`e^{-iEt}` supplying the only time dependence.
+
+⚠ **Papers 1 and 2 here are the July 2025 copies, and they are out of date.**
+`4_Levinson.pdf` cites 2026 revisions of both, which are not in this repo. Any erratum
+written against these two may already be fixed. Ask for the current versions.
+
+⚠ **Paper 3 was rewritten, not patched**, on 2026-08-14 — retitled *Wave and scattering
+operators…* and renumbered end to end. Older notes in this repo cite labels that no longer
+exist; `PAPER_NOTES.md` §1.3 has the mapping.
 
 **Not in this repo:** `[BS25]`, *"Construction of scattering matrices with varying
-dimension…"*, which paper 2 cites for several primitives (`Prop. A.3.2(f)`, `Def. 2.1.7`,
-…). Its numbering matches no document here, so those citations currently resolve to
-nothing. Asking Schober for it is item 8 of the draft message in `AUDIT.md`.
+dimension…"*, cited by paper 2 for several primitives (`Prop. A.3.2(f)`, `Def. 2.1.7`, …).
+Its numbering matches no document here. It has been removed from paper 3 in the rewrite and
+now survives only in paper 2.
 
 ## Correspondence
 
@@ -58,12 +67,15 @@ needs no ruling (§7). Start at §1.
 
 ## `PAPER_NOTES.md`
 
-Errors found in the three papers and the algorithm spec, each verified by a second agent
-whose job was to refute it, and most backed by a number. Section 1 is grouped by paper and
-ordered by severity, and includes a **"checked and CORRECT — do not let anyone fix these"**
-list, which matters as much as the error list. Section 2 is twelve questions ready to paste
-into an email, each answerable in a sentence or two. Section 3 is the convention table
-across all four documents; section 4 is what could not be checked.
+Errata against the papers and the algorithm spec, each verified by a second agent whose job
+was to refute it, and most backed by a number. Section 1 includes a **"checked and CORRECT
+— do not let anyone fix these"** list, which matters as much as the error list.
+
+**Read the version warning at the top before using any of it.** §1.3 (paper 3) and §2 (the
+question list) were removed on 2026-08-24 — paper 3 was rewritten and five of the twelve
+questions had gone stale, two of them asking about things the author had already removed.
+§1.1 and §1.2 stand, but they are against July 2025 copies of papers 1 and 2 and a 2026
+revision of each exists.
 
 ## Levinson — phase two, and why there is no document here yet
 
