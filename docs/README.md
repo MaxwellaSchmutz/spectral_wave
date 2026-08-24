@@ -25,7 +25,7 @@ one's main theorem as a black box.
 | **`1_JostSolutions.pdf`** | 1 Jul 2025 | the Jost solutions `u^{E,σ}_τ` | Thm 3.3 + 3.7: existence, uniqueness, analyticity in `E`, via a Neumann series on a Volterra kernel |
 | **`2_LimitingAbsorptionPrinciple.pdf`** | 2 Jul 2025 | the Green's function, the LAP, the scattering matrix `S^E` | Lemma 3.1.4 + Thm 3.2.1: the resolvent kernel stays continuous down onto the real band |
 | **`3_GeneralizedFourier.pdf`** | **14 Aug 2026** | the transforms `F_±`, then `Ω_±` and `S` | **Thm 3.2.5(a), p. 20**: `F_±^* F_± = P_ac(H)`. Schober: *"The whole reason why you do what you do."* |
-| **`4_Levinson.pdf`** | **12 Aug 2026** | relates `det S^E` to the bound and half-bound states | Thm 4.2.4, p. 27 — **draft in progress** |
+| **`4_Levinson.pdf`** | **12 Aug 2026** | — | **draft in progress; not summarised here** |
 
 The repo's `psi(n,t)` is the inverse of paper 3's expansion theorem — run backwards, with
 `e^{-iEt}` supplying the only time dependence.
@@ -86,17 +86,12 @@ result.** It still carries `[BS26a, TODO]` citations for results it depends on.
 
 Two documents used to sit here — `LEVINSON_PLAN.md` and `LEVINSON_GUIDE.md`, written
 2026-08-21. **They were deleted on 2026-08-24 and should not be recovered.** They were
-written before the draft was available, reconstructed a formula from the adjacent
-constant-dimension literature plus numerics, and stated the relation with the **opposite
-sign** to the draft:
+written before the draft existed, reconstructed a relation from adjacent literature plus
+numerics, got it wrong, and described the work as an open gap rather than as something the
+author was actively writing. They are in git history at `21b17ab` if anyone needs to see
+what was wrong; nothing in them should be cited.
 
-    those docs   W = J_b + (1/2) J_h - L
-    draft, p.3   (1/2 pi i) Int_{sigma(H_0)} det(S_E)'/det(S_E) dE = L - (J_b + (1/2) J_h)
-
-They also asserted that no theorem covered this model, which was the wrong way to describe
-a result the author was in the middle of writing. They are in git history at commit
-`21b17ab` if anyone needs to see what was wrong, but nothing in them should be cited.
-
-Anything written here in future must be grounded in `papers/4_Levinson.pdf` with page
-references, must not restate the draft's results as established, and must keep numerical
-measurements clearly separated from claims about what is proved.
+**Nothing about the in-progress theorem goes in this repo.** Not the statement, not a
+paraphrase, not a "corrected" version. The paper is the paper — read it there. This
+directory holds the implementation and its verification, and stops at the point where the
+mathematics is still being worked out.

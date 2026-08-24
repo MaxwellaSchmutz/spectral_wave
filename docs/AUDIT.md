@@ -361,9 +361,8 @@ Items 1, 3 and the package rename were done on 2026-08-21; the rest are open.
    but this repo holds the July 2025 copies. Every erratum in `PAPER_NOTES.md` §1.1–1.2 is
    against a file the author has moved past. **Unblocked by:** the two PDFs.
 3. **Whether paper 2's `S^E` is paper 3's.** Both were renumbered; paper 3's is now
-   Definition 4.4 (p. 25). Paper 4 Proposition 4.2.3 (p. 26) gives
-   `det S^E = (−1)^{dim(P^E_> ℂ^L)} det(W^{E,−})/det(W^{E,+})`, which relates the
-   determinant but is not the identification of the matrices.
+   Definition 4.4 (p. 25). Verified numerically for the L=1 single-site case (1.7e-14),
+   which is not the same as the identification of the matrices in general.
 4. **The final signs in paper 2 §4.1.** *Blocked on:* Schober's own unresolved edits. Lemma
    4.1.3 is titled "sign problem"; 4.1.5(b),(d) carry struck-through `−σ → σ`; a margin note
    reads "I do not understand this argument." Against the July 2025 copy — may be resolved
