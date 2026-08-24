@@ -65,37 +65,26 @@ list, which matters as much as the error list. Section 2 is twelve questions rea
 into an email, each answerable in a sentence or two. Section 3 is the convention table
 across all four documents; section 4 is what could not be checked.
 
-## `LEVINSON_PLAN.md`
+## Levinson — phase two, and why there is no document here yet
 
-**Start here for phase two.** The operational plan: what the Levinson integral is, exactly
-what formula applies to *this* operator, how far the code already is, and nine ordered steps
-from here to a working computation. It supersedes `LEVINSON_GUIDE.md` wherever the two
-disagree — in particular on the sign, where it has the measurement and the guide does not.
+`papers/4_Levinson.pdf` is the work in progress: *"A Levinson-type theorem for Schrödinger
+operators on a one-dimensional lattice with varying spectral multiplicity"*, Ballesteros
+Montero & Schober, 12 August 2026. **It is a draft being actively written, not a settled
+result.** It still carries `[BS26a, TODO]` citations for results it depends on.
 
-Three results worth knowing before you read anything else:
+Two documents used to sit here — `LEVINSON_PLAN.md` and `LEVINSON_GUIDE.md`, written
+2026-08-21. **They were deleted on 2026-08-24 and should not be recovered.** They were
+written before the draft was available, reconstructed a formula from the adjacent
+constant-dimension literature plus numerics, and stated the relation with the **opposite
+sign** to the draft:
 
-- **`det S_repo(E) = conj(det S_BFNS(E))`.** The repo's scattering matrix is the complex
-  conjugate of the literature's, for a structural reason (with `Im z > 0` and `e^{−itE}`,
-  `z^n` is left-moving), so windings come out with the opposite sign. Calibrate once against
-  a known case rather than trusting either convention.
-- **Eigenvalues can sit *inside* the band once the `a_l` differ.** For `A = 1` the literature
-  proves they cannot; that protection is gone here. Worked counterexample at `a = (1.3, 0.4)`.
-  A bound-state count that only looks outside the band will be wrong.
-- **Levinson appears in papers 1–3 only in the bibliographies, never in a body**, and no
-  published theorem covers this model. Schober is pointing at the gap between his own papers
-  and the literature they cite.
+    those docs   W = J_b + (1/2) J_h - L
+    draft, p.3   (1/2 pi i) Int_{sigma(H_0)} det(S_E)'/det(S_E) dE = L - (J_b + (1/2) J_h)
 
-## `LEVINSON_GUIDE.md`
+They also asserted that no theorem covered this model, which was the wrong way to describe
+a result the author was in the middle of writing. They are in git history at commit
+`21b17ab` if anyone needs to see what was wrong, but nothing in them should be cited.
 
-The learning path for the next phase. After Schober confirmed the `S^E` result he proposed
-computing the **Levinson integral**, explicitly because the code can now produce `S^E` and
-its determinant. This guide builds from the argument principle — which you already have
-from complex analysis — to the actual formula, with a numerical exercise against this repo
-at each step, and a two-week and three-month plan.
-
-The target result is Ballesteros–Franco–Naumkin–Schulz-Baldes, *Levinson theorem for
-discrete Schrödinger operators on the line with matrix potentials having a first moment*
-([arXiv:2211.05021](https://arxiv.org/abs/2211.05021), Thm 4) — almost certainly the
-`[BFNS24]` in paper 1's bibliography. Note it assumes `A = 1`, so all channels open and
-close together. This project is the case where they close one at a time, which is where the
-new mathematics is and why Schober wants it.
+Anything written here in future must be grounded in `papers/4_Levinson.pdf` with page
+references, must not restate the draft's results as established, and must keep numerical
+measurements clearly separated from claims about what is proved.
