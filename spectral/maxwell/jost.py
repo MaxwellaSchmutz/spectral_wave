@@ -7,7 +7,7 @@ For n in Z intersect [N, M] and E in (-2 a_L, 2 a_L):
 
 The sum prefactor is +i for u_+ and -i for u_-, INDEPENDENT of the sigma
 superscript -- the sign depends only on the lower (+/-) index. Schober confirmed
-this (A.2): the literal real, sigma-dependent +/- prefactor gives residual
+this: the literal real, sigma-dependent +/- prefactor gives residual
 (H u)(0) - E u(0) = 0.5(1 + sigma*i) at L=1, V(0)=0.5, E=0; the +i/-i prefactor
 zeroes it. Each u_tau^{E, sigma}(n) is an L x L matrix.
 
@@ -77,7 +77,7 @@ def compute_jost(
     j_to_lat = (j_sites - int(lattice[0])).astype(int)
     j_set = set(int(j) for j in j_sites)
 
-    # Sum prefactor (Schober A.2): +i on the u_+ sum and -i on the u_- sum,
+    # Sum prefactor (confirmed by Schober): +i on the u_+ sum and -i on the u_- sum,
     # INDEPENDENT of sigma. The sign tracks the lower (+/-) index only.
     sgn_plus  = +1j
     sgn_minus = -1j

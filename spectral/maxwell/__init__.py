@@ -1,6 +1,6 @@
 """Schober's matrix-valued lattice scattering algorithm.
 
-See docs/MaxwellAlgorithm.pdf for the ten steps; each is one module here.
+README.md's step table maps the ten steps to the modules here.
 
     from spectral.maxwell import MaxwellSpec, compute_psi
 

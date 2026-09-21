@@ -2,7 +2,7 @@
 time-evolved density psi(n, t).
 
 Pipeline:
-    1. channel_momenta + density_of_states (steps 1-3)
+    1. channel_momenta + density_of_states (steps 1 and 3; step 2 is inline)
     2. compute_jost on the lattice (step 5, via the s-kernel recursion)
     3. compute_wronskians (step 6, all four W_tau^{E, sigma})
     4. compute_greens (step 7, with the W_+ / W_- branch by n vs j_k)
@@ -44,7 +44,7 @@ def compute_psi(spec: MaxwellSpec) -> np.ndarray:
 
     a_min = float(a[-1])
     if spec.E_segments is not None:
-        # Memo item B.5: one GL rule per [c, d] window converges spectrally
+        # One GL rule per [c, d] window converges spectrally
         # where a single rule spanning the f discontinuities does not.
         segs = safe_open_band_segments(a_min, spec.E_segments, spec.threshold_buffer)
         E_nodes, E_weights = gauss_legendre_segments(segs, spec.n_quad)
@@ -59,7 +59,7 @@ def compute_psi(spec: MaxwellSpec) -> np.ndarray:
     f_vals = spec.evaluate_f(E_nodes)                     # (n_E, L, 2)
 
     if K == 0:
-        # Free case (Interpretation 2, Schober A.1): w^{E,sigma}_{l}(n) = z_l^{-sigma n} e_l.
+        # Free case (Interpretation 2): w^{E,sigma}_{l}(n) = z_l^{-sigma n} e_l.
         # The summed sigma is the wave-vector sign, so the two sigma entries are the
         # distinct generalized eigenvectors z^{-n} and z^{+n} (no potential, so the
         # fixed outer/branch index drops out).
@@ -105,7 +105,7 @@ def compute_psi(spec: MaxwellSpec) -> np.ndarray:
         amp = np.einsum('E,E,Enc->nc', ph, E_weights, integrand_E_n)
         psi[ti] = (np.abs(amp) ** 2).sum(axis=-1)
 
-    # A.11 (Schober ruling 2026-08): the literal p normalises the total to
+    # Schober ruling 2026-08: the literal p normalises the total to
     # 2*pi, not 1 -- the lattice sum gives sum_n e^{-in(theta-theta')} =
     # 2 pi delta(theta - theta'), and nothing downstream removes it. His
     # ruling, verbatim: "Don't change p, just devide the final function

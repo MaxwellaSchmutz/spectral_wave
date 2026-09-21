@@ -3,7 +3,7 @@
     G^{E,sigma}(n, k) = -u_+^{E, sigma}(n) (W_+^{E, sigma})^{-1} u_-^{E, -sigma}(j_k)^*    if n >  j_k
                       = +u_-^{E, sigma}(n) (W_-^{E, sigma})^{-1} u_+^{E, -sigma}(j_k)^*    if n <= j_k
 
-Sign convention (A.10, Schober ruling 2026-08): the branch signs are the
+Sign convention (Schober ruling 2026-08): the branch signs are the
 `-/+` pattern of paper 2's resolvent kernel, so G is (H - E)^{-1}. The
 literal spec had them the other way round, making G = (E - H)^{-1}; step 8
 then subtracts it and double-counts the potential, leaving

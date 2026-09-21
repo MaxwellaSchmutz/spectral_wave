@@ -33,14 +33,13 @@ def _fit_to_screen(window) -> None:
 
 
 def main() -> int:
-    # A packaged build runs with console=False, so an import-time or startup
-    # crash would otherwise vanish silently. Log it next to the executable.
-    log = Path(sys.executable).with_name("maxwell-crash.log") \
-        if getattr(sys, "frozen", False) else Path("maxwell-crash.log")
+    # Log hard crashes (faulthandler) and startup failures to a file so they
+    # cannot vanish silently when there is no console.
+    log = Path("maxwell-crash.log")
     try:
         faulthandler.enable(open(log, "a", buffering=1))
     except OSError:
-        pass  # read-only install dir; not worth failing startup over
+        pass  # unwritable working directory; not worth failing startup over
 
     app = QApplication(sys.argv)
     app.setApplicationName("Maxwell Algorithm")

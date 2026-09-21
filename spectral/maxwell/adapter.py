@@ -20,7 +20,7 @@ def maxwell_to_frames(
 ) -> tuple[list[list[np.ndarray]], float]:
     """Compute psi(n, t) and return (frames, global_max).
 
-    This is what MaxwellWorker.finished carries (gui/main_window.py:507).
+    This is what MaxwellWorker.finished carries (gui/main_window.py).
     frames[t] is a one-element list holding psi at time t -- a row view into
     the single (n_t, n_sites) array, not a copy. The one-element nesting is
     the shape MainWindow's plotting code expects; x values come from
@@ -40,7 +40,6 @@ def maxwell_to_frames(
     if progress_callback is not None:
         progress_callback(95)
 
-    # GUI plots np.abs(...) of curves; psi is already non-negative.
     global_max = float(np.max(psi)) if psi.size else 0.0
     frames = [[psi[t]] for t in range(psi.shape[0])]
 

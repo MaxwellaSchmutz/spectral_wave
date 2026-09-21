@@ -14,7 +14,7 @@ DEFAULT_THRESHOLD_BUFFER = 1e-3
 
 @dataclass
 class MaxwellSpec:
-    """The 'Data' block (items a-f) of docs/MaxwellAlgorithm.pdf.
+    """The algorithm's input 'Data' block (items a-f).
 
     All fields are validated by ``validate()`` against the constraints in
     that block.
@@ -30,20 +30,20 @@ class MaxwellSpec:
     f: Callable[[np.ndarray], np.ndarray]
     times: np.ndarray
     n_quad: int = 128
-    # Optional list of disjoint energy windows [c, d] for composite quadrature
-    # (author memo, item B.5). When set, steps 9-10 integrate each segment with
-    # its own Gauss-Legendre rule instead of one rule over ``interval``, which
-    # converges spectrally for window-type f. When None, ``interval`` is used.
+    # Optional list of disjoint energy windows [c, d] for composite quadrature.
+    # When set, steps 9-10 integrate each segment with its own Gauss-Legendre
+    # rule instead of one rule over ``interval``, which converges spectrally
+    # for window-type f. When None, ``interval`` is used.
     E_segments: list[tuple[float, float]] | None = None
     threshold_buffer: float = DEFAULT_THRESHOLD_BUFFER
     # Which sign convention to use for the outer w_{l,sigma}^{E,pm} in step 10.
     # +1 selects w^{E,+} (retarded / outgoing F_+ branch); -1 selects w^{E,-}.
-    # Step 10 of the spec never binds this index -- see A.12 in docs/AUDIT.md.
+    # Step 10 of the spec never binds this index.
     # Both branches are exact, norm-preserving eigenbases; they differ by the
     # on-shell scattering matrix S_E, so psi depends on the choice at order one
-    # whenever a potential is present. Awaiting Schober's ruling on whether the
-    # step-10 input is a fixed f (branches must differ) or a state psi_0
-    # (branches agree). Default +1.
+    # whenever a potential is present. Schober ruled (2026-08-21) that the
+    # step-10 input is a fixed f, so the branches are meant to differ by S_E.
+    # Default +1.
     outer_sign: int = +1
 
     def __post_init__(self) -> None:
@@ -146,10 +146,6 @@ class MaxwellSpec:
     @property
     def K(self) -> int:
         return int(self.j_sites.shape[0])
-
-    @property
-    def n_sites(self) -> int:
-        return self.M - self.N + 1
 
     def lattice(self) -> np.ndarray:
         return np.arange(self.N, self.M + 1, dtype=int)

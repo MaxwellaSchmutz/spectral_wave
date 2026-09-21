@@ -1,4 +1,4 @@
-"""Step 4 of docs/MaxwellAlgorithm.pdf, implemented verbatim.
+"""Step 4 of the Maxwell algorithm, implemented verbatim.
 
     s(n, k, E) = diag(nu_l(E) * (z_l^{j_k - n} - z_l^{n - j_k}))_{l=1,...,L}
 

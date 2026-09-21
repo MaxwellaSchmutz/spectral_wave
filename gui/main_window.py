@@ -12,7 +12,7 @@ import numpy as np
 from PyQt6.QtCore import (
     QEvent, QObject, QSize, Qt, QThread, QTimer, pyqtSignal,
 )
-from PyQt6.QtGui import QColor, QFont, QGuiApplication, QPainter
+from PyQt6.QtGui import QColor, QFont, QPainter
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -161,7 +161,6 @@ QLineEdit:hover, QComboBox:hover {{ border-color: {BORDER_HV}; }}
 QLineEdit:focus, QComboBox:focus, QComboBox:on {{
     border-color: {ACCENT}; background-color: {BG_INPUT2};
 }}
-QLineEdit[bad="true"] {{ border-color: {ERROR}; background-color: #2b1c24; }}
 QLineEdit:disabled, QComboBox:disabled {{
     background-color: {DISABLED_BG}; border-color: {BORDER_SOFT}; color: {DISABLED_FG};
 }}
@@ -450,7 +449,7 @@ PRESET_DESCRIPTIONS: dict[str, str] = {
 
 
 # Sigma-mode choices for the Gaussian f: combo label -> (h_plus, h_minus)
-# weights on the two σ channels (memo B.1). Balanced (1,1) gives Schober's
+# weights on the two σ channels. Balanced (1,1) gives Schober's
 # standing packet; right / left select a single propagation direction.
 SIGMA_MODES: dict[str, tuple[float, float]] = {
     "balanced (1,1)": (1.0, 1.0),
@@ -539,7 +538,7 @@ class MaxwellWorker(QThread):
 def _ffmpeg_available() -> bool:
     """True if matplotlib can actually write an MP4.
 
-    NOT `shutil.which("ffmpeg")`: the dev dependency `imageio-ffmpeg` ships a
+    NOT `shutil.which("ffmpeg")`: the dependency `imageio-ffmpeg` ships a
     bundled binary that never lands on PATH, so `which` reported False and the
     export silently fell back to GIF even with a perfectly good encoder
     installed. Ask matplotlib instead, since matplotlib is what does the work.
@@ -774,7 +773,6 @@ class MainWindow(QMainWindow):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setHandleWidth(5)
         splitter.setChildrenCollapsible(False)
-        self._splitter = splitter
         root.addWidget(splitter)
 
         # ---------------- Sidebar ----------------
@@ -1062,13 +1060,6 @@ class MainWindow(QMainWindow):
         splitter.setSizes([400, 10_000])
 
         self.setMinimumSize(QSize(1120, 600))
-        scr = self.screen() or QGuiApplication.primaryScreen()
-        avail = scr.availableGeometry()
-        w0 = max(1120, min(1480, int(avail.width()  * 0.94)))
-        h0 = max(600,  min(940,  int(avail.height() * 0.94)))
-        self.resize(w0, h0)
-        self.move(avail.left() + (avail.width()  - w0) // 2,
-                  avail.top()  + (avail.height() - h0) // 2)
 
         # ---------------- Animation state ----------------
         self.timer = QTimer()
@@ -1083,8 +1074,6 @@ class MainWindow(QMainWindow):
         self.fill = None
         self.water_image = None
         self.water_time_line = None
-        self.line_potential_lines = []
-        self.water_potential_lines = []
         self._j_sites_for_render = np.array([], dtype=int)
         self._nquad_warning = ""
 
@@ -1285,16 +1274,6 @@ class MainWindow(QMainWindow):
                 f"   ⚠ n_quad={spec.n_quad} may alias "
                 f"(phantom mirror packet); recommend ≥ {recommended}"
             )
-        if False:
-            recommended = min_nquad(
-                spec.N, spec.M, float(spec.times[0]), float(spec.times[-1]),
-                spec.interval[0], spec.interval[1], spec.a,
-            )
-            if spec.n_quad < recommended:
-                self._nquad_warning = (
-                    f"   ⚠ n_quad={spec.n_quad} may alias "
-                    f"(phantom mirror packet); recommend ≥ {recommended}"
-                )
 
         # ---- tear down any in-flight playback / compute ----
         self.timer.stop()
@@ -1338,8 +1317,6 @@ class MainWindow(QMainWindow):
         self.fill = None
         self.water_image = None
         self.water_time_line = None
-        self.line_potential_lines = []
-        self.water_potential_lines = []
         if self._colorbar is not None:
             try:
                 self._colorbar.remove()
@@ -1572,10 +1549,8 @@ class MainWindow(QMainWindow):
         )
 
         # Potential-site markers on both panels
-        self.water_potential_lines = []
         for jk in self._j_sites_for_render:
-            ln = ax.axvline(jk, color="white", alpha=0.30, lw=0.8, zorder=5)
-            self.water_potential_lines.append(ln)
+            ax.axvline(jk, color="white", alpha=0.30, lw=0.8, zorder=5)
 
         # Current-time horizontal line (white with subtle glow)
         t0 = float(self.times[0])
@@ -1617,12 +1592,10 @@ class MainWindow(QMainWindow):
                 self.lattice, 0, curve, color=ACCENT2, alpha=0.18,
             )
             # potential markers
-            self.line_potential_lines = []
             for jk in self._j_sites_for_render:
-                ln = self.ax_line.axvline(
+                self.ax_line.axvline(
                     jk, color=ACCENT, alpha=0.42, lw=0.9, zorder=2,
                 )
-                self.line_potential_lines.append(ln)
             self.ax_line.set_xlim(self.lattice[0], self.lattice[-1])
             self.ax_line.set_ylim(0, self.ylim)
         else:
@@ -1774,7 +1747,7 @@ class MainWindow(QMainWindow):
         if window_f is not None:
             f = window_f
         else:
-            # Gaussian f (memo B.1): sigma-mode weights h± scale the two σ
+            # Gaussian f: sigma-mode weights h± scale the two σ
             # channels, and the θ(E) phase parks the packet at lattice site
             # n_init at t=0. Single channel l₀=0; other channels stay zero.
             a0 = float(a[0])

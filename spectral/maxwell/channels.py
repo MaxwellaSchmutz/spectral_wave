@@ -1,8 +1,13 @@
-"""Steps 1-3 of the Maxwell algorithm.
+"""Steps 1 and 3 of the Maxwell algorithm.
 
-Channel momenta z_l(E), free plane-wave bases phi_pm(n, E), and per-channel
-density-of-states nu_l(E). Everything here is purely algebraic and unambiguous;
-all routines are vectorized over the energy axis.
+Channel momenta z_l(E) and per-channel density-of-states nu_l(E). Everything
+here is purely algebraic and unambiguous; all routines are vectorized over the
+energy axis.
+
+Step 2, the free plane waves phi_sigma(n) = diag(z_l^{-sigma n}), has no
+function of its own: jost.py, eigfunc.py and evolve.py each broadcast that
+expression over the whole lattice. If you change the convention, change it in
+all three.
 """
 
 from __future__ import annotations
@@ -38,20 +43,3 @@ def density_of_states(Z: np.ndarray, a: np.ndarray) -> np.ndarray:
     """
     a = np.asarray(a, dtype=float).reshape(-1)
     return 1.0 / (2.0 * a[None, :] * np.imag(Z))
-
-
-def phi_diag(Z: np.ndarray, n: int, sigma: int) -> np.ndarray:
-    """Step 2: diagonal of phi_sigma(n) = diag(z_l^{-sigma * n}).
-
-    sigma = +1 -> phi_+(n) has diag entries z_l^{-n}
-    sigma = -1 -> phi_-(n) has diag entries z_l^{+n}
-
-    This is the reference definition of step 2, kept single-site and readable.
-    The hot paths do NOT call it -- jost.py, eigfunc.py and evolve.py each
-    broadcast the same expression over the whole lattice at once, which this
-    signature (scalar n) cannot express. If you change the convention here,
-    change it in those three places too.
-    """
-    if sigma not in (+1, -1):
-        raise ValueError(f"sigma must be +/- 1, got {sigma}")
-    return Z ** (-sigma * n)

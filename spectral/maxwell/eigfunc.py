@@ -1,4 +1,4 @@
-"""Step 8 of the Maxwell algorithm (Interpretation 2, per Schober A.1).
+"""Step 8 of the Maxwell algorithm (Interpretation 2, per Schober).
 
     w^{E,sigma}_{l,pm}(n) := z_l(E)^{-sigma n} e_l
                            - sum_{k=1}^K G^{E,pm}(n, k) V(j_k) z_l(E)^{-sigma j_k} e_l
@@ -7,7 +7,7 @@ Schober ("Interpretation 2 is correct, the formula was right as written"):
   * sigma is the SUMMED index (paired with f_{l,sigma} in step 10) and is the
     WAVE-VECTOR sign -- it drives the plane-wave exponent z_l^{-sigma n}. The two
     sigma values are the two generalized eigenvectors (E approached from above /
-    below; A.9).
+    below).
   * the lower +/- index is the FIXED outer/branch choice (spec.outer_sign); it
     selects ONE Green's-function branch G^{E,pm}, the same for both sigma.
 
@@ -42,10 +42,10 @@ def full_eigenfunctions(
                  (it loops sigma_idx, pairing u_+[sigma] with u_-[-sigma]).
                  The two readings coincide only if the sigma of paper 2's
                  G^{K}_{E,sigma} really is the +/- i0 boundary label. This is
-                 the seam the open A.12 question sits on -- see docs/AUDIT.md
-                 sections 1-4. Do not "fix" the axis meaning without a ruling:
-                 both branches are exact, norm-preserving eigenbases, and the
-                 test suite pins both outer_sign values as passing.
+                 the seam the outer_sign (step-10 +/-) choice sits on. Do not
+                 "fix" the axis meaning without a ruling: both branches are
+                 exact, norm-preserving eigenbases ((H - E) w = 0 for either
+                 outer_sign).
     lattice    : (n_sites,)
     outer_sign : +1 or -1 -- the fixed lower (+/-) index; selects the branch.
 
@@ -61,7 +61,7 @@ def full_eigenfunctions(
             "G_grid must have shape (2, n_E, n_sites, K, L, L) -- "
             "stack the branch=+ and branch=- Green's functions along axis 0."
         )
-    _, n_E, n_sites, K, L, _ = G_grid.shape
+    _, n_E, n_sites, _, L, _ = G_grid.shape
     n_arr = lattice.astype(float)
     j_arr = j_sites.astype(float)
 

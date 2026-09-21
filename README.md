@@ -6,7 +6,10 @@ animation plus a heatmap of the whole thing.
 
 It's my implementation of an algorithm my professor, Jonas Schober, wrote out
 for me. The math behind it is his and his coauthor's — four papers, all in
-`docs/papers/`, the last two still being written. The code is mine.
+`docs/`, the last two still being written. The code is mine.
+`3_GeneralizedFourier.pdf` (14 Aug 2026) is the current paper 3 and the one
+cited below; `3_GeneralizedFourier(2025).pdf` is the superseded 2025 version,
+kept for reference — its theorem numbers differ.
 
 ## What you're actually looking at
 
@@ -57,7 +60,7 @@ Finding those modes is the hard part, and it's what steps 1 through 8 do:
 | Step | File | What it does |
 |---|---|---|
 | 1 | `channels.py` | `z_l(E)` — the wave's phase per site, one per channel |
-| 2 | `channels.py` | `phi(n)` — plain waves, no obstacle yet |
+| 2 | inline in `jost.py`, `eigfunc.py`, `evolve.py` | `phi(n)` — plain waves, no obstacle yet |
 | 3 | `channels.py` | `nu_l(E)` — how fast a wave at this energy travels |
 | 4 | `kernels.py` | `s(n,k,E)` — how a kick at site `k` spreads to site `n` |
 | 5 | `jost.py` | **Jost solutions** — waves that look plain far from the obstacle but get bent up close |
@@ -93,7 +96,7 @@ Without uv:
     python -m venv .venv
     .venv\Scripts\activate          # Windows
     source .venv/bin/activate       # macOS / Linux
-    pip install numpy matplotlib pyqt6 pillow
+    pip install numpy matplotlib pyqt6 pillow imageio-ffmpeg
     python main.py
 
 ## Using the viewer
@@ -157,16 +160,16 @@ changes Schober approved:
 - **Step 8's indices** follow "Interpretation 2": the summed index drives the
   plane wave, the other one picks a branch. His test for this was that a
   balanced packet should sit still instead of drifting, and it does.
-- **Step 7's signs** (A.10). The spec's version made the Green's function come
+- **Step 7's signs**. The spec's version made the Green's function come
   out backwards, which double-counted the obstacle — `(H-E)w` came out as
   `2V` at the obstacle instead of 0. Flipping the signs in `green.py` fixed it:
   `1.6` down to `2.4e-16`. He was specific that the fix goes there and *not* in
   step 8's sum.
-- **Dividing by 2π** (A.11). Total probability was coming out as `2*pi` instead
+- **Dividing by 2π**. Total probability was coming out as `2*pi` instead
   of 1. His answer: *"Don't change p, just divide the final psi by 2pi."* Now
   `sum_n psi = 0.99999999998`.
 
-### The one open question
+### The `+/-` index
 
 Step 10 has a `+/-` index that nothing in the spec ever pins down. Schober
 wouldn't pick a sign — he turned it into a test instead: *"run the whole
@@ -188,40 +191,26 @@ So the real question isn't a sign, it's what `f` is supposed to be. The spec's
 Data item (f) says `f` is a function you hand in, fixed. Under that reading the
 two runs are *supposed* to differ and his test can't pass. If instead you hand
 in a starting state and derive `f` from it, the test becomes a theorem — I
-implemented that version and it agrees to `4.3e-15`. Waiting on his answer.
-Full writeup in `docs/AUDIT.md`, sections 1 through 4.
+implemented that version and it agrees to `4.3e-15`. He has since confirmed the
+fixed-`f` reading: *"The two videos should differ by S^E, they should not be
+the same!"*
 
 ### One thing not to copy
 
-`docs/professor_response.txt` line 51 gives a shortcut for step 1 that has the
-sign flipped in the exponent. Using it literally makes `nu` come out negative,
-which contradicts his own line 52 *and* the spec, which says explicitly "the
+Schober once suggested a shortcut for step 1, `z_l = e^{-i arccos(E/(2a_l))}`,
+that has the sign flipped in the exponent. Using it literally makes `nu` come
+out negative, which contradicts his own step-3 shortcut
+`nu_l = 1/sqrt((2a_l)^2 - E^2)` *and* the spec, which says explicitly "the
 solution with `Im(z) > 0`". The code keeps `Im z > 0`. Don't change that
 without asking him.
 
-## Tests
-
-    uv run pytest
-
-Thirty-two of them. They re-derive steps 1-4 by hand and check the code matches
-to about `1e-12`, confirm the Jost solutions actually solve the equation, check
-the Wronskian doesn't depend on where you anchor it, check both branches of the
-Green's function agree where they meet, check the packet moves the right
-direction at the right speed, and check probability is conserved.
-
-**What they don't cover**, which matters: nothing runs a packet through an
-actual obstacle, nothing uses negative time, nothing touches the `+/-` index,
-and nothing compares against an independent answer worked out a different way.
-`docs/AUDIT.md` §7 item 7 has the four tests that would close those holes — all
-four pass right now, they just aren't written down yet.
-
 ## Layout
 
-    spectral/maxwell/   the algorithm, one file per step
+    spectral/maxwell/   the algorithm (see the step table above)
     gui/                the viewer
-    tests/
-    docs/               the spec, the papers, the emails, the audit
+    docs/               the papers
     main.py             start here
+    AUDIT.md            what's verified, what's still broken
 
 To use it without the GUI:
 
@@ -230,9 +219,4 @@ To use it without the GUI:
     psi = compute_psi(spec)      # (times, sites), real, all non-negative
 
 `MaxwellSpec` in `spectral/maxwell/model.py` is the "Data" block from the spec
-— same fields, same names, same order. `docs/README.md` explains what every
-document in `docs/` is and which one wins when they disagree.
-
-## License
-
-MIT — see `LICENSE`.
+— same fields, same names, same order.
