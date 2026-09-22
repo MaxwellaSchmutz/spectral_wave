@@ -56,6 +56,8 @@ except ImportError:  # running from a source checkout
 # ---------------------------------------------------------------------- #
 
 TOLERANCE = 1e-6                 # max|psi_n - psi_2n| / max|psi_2n|
+CACHE_TRUST_FRACTION = 0.1       # a stored record is only trusted this far
+                                 # inside TOLERANCE; see _cached_record
 MAX_QUAD_NODES = 8192            # every run, including the checks
 MAX_PEAK_BYTES = 700_000_000     # estimated peak working set of a whole run()
 MAX_RESULT_VALUES = 4_000_000    # n_t * n_sites
@@ -711,6 +713,13 @@ def _cached_record(cached_validation_json, key, params, warnings):
             return None     # stale build: silently recompute
         warnings.append("A cached validation record for this configuration was "
                         "malformed, so the convergence check was run again.")
+        return None
+    if rec["discrepancy_rel_peak"] > TOLERANCE * CACHE_TRUST_FRACTION:
+        # Converged, but not by much. The shipped records are measured with
+        # native NumPy at build time while this runs on whatever NumPy the
+        # browser loaded, and those differ in their last digits: a decision
+        # this close to the tolerance could legitimately go the other way
+        # here. Re-run the check in the runtime that will show the result.
         return None
     return rec
 

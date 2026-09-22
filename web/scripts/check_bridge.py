@@ -531,6 +531,23 @@ def check_cache():
     check(m["ok"] and m["quadrature"]["status"] == "cached"
           and m["quadrature"]["used_n_quad"] == 2 * req,
           "consistent refined record (used 2 x requested, check 4 x) is accepted")
+    # Converged, but only just: the browser's NumPy is not the one that
+    # measured this, so the check is run again here instead of trusted.
+    borderline = dict(rec, discrepancy_rel_peak=browser.TOLERANCE * 0.5)
+    stages = []
+    m, _ = run(BARRIER, json.dumps({key: borderline}), stages)
+    check(m["ok"] and m["quadrature"]["status"] == "verified"
+          and "checking" in stages
+          and not any("malformed" in w for w in m["warnings"]),
+          "record within TOLERANCE but outside the trust margin is re-checked, not rejected",
+          f"stored {borderline['discrepancy_rel_peak']:.1e} vs trust margin "
+          f"{browser.TOLERANCE * browser.CACHE_TRUST_FRACTION:.1e}")
+    just_inside = dict(rec, discrepancy_rel_peak=browser.TOLERANCE
+                       * browser.CACHE_TRUST_FRACTION * 0.5)
+    m, _ = run(BARRIER, json.dumps({key: just_inside}))
+    check(m["ok"] and m["quadrature"]["status"] == "cached",
+          "record comfortably inside the trust margin is still used")
+
     wide = with_(FREE, N=-400, M=400)
     m_ref, psi_ref = run(wide)
     m_c, psi_c = run(wide, json.dumps({m_ref["config_key"]: browser.validation_record(m_ref)}))
