@@ -17,6 +17,15 @@ WEB_DIR = REPO_ROOT / "web"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+# These scripts print physics symbols (sigma, subscripts). A Windows console --
+# and any piped stdout on Windows -- defaults to the ANSI code page and raises
+# UnicodeEncodeError on them, so force UTF-8 wherever the stream allows it.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError, ValueError):
+        pass
+
 
 def _git(*args: str) -> str | None:
     try:

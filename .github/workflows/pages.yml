@@ -42,8 +42,18 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
         working-directory: web
+      # Job logs need repository admin rights to download, so failing lines are
+      # re-emitted as annotations, which anyone who can see the run can read.
       - name: Bridge self-check (validation, convergence policy, independent references)
-        run: python web/scripts/check_bridge.py
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! python web/scripts/check_bridge.py 2>&1 | tee check_bridge.log; then
+            grep -E '^FAIL|Traceback|Error|error:' check_bridge.log | head -20 \
+              | while IFS= read -r line; do echo "::error title=check_bridge::${line}"; done
+            tail -n 25 check_bridge.log | while IFS= read -r line; do echo "::error title=check_bridge tail::${line}"; done
+            exit 1
+          fi
       - name: Build site (Python archive + type-check + Vite)
         run: npm run build
         working-directory: web
@@ -88,8 +98,15 @@ jobs:
       - run: npx playwright install --with-deps chromium firefox
         working-directory: web
       - name: Browser verification (Chromium + Firefox)
-        run: npx playwright test
+        shell: bash
         working-directory: web
+        run: |
+          set -o pipefail
+          if ! npx playwright test 2>&1 | tee playwright.log; then
+            grep -E '✘|Error|error:|failed|expect\(' playwright.log | head -30 \
+              | while IFS= read -r line; do echo "::error title=playwright (${{ matrix.os }})::${line}"; done
+            exit 1
+          fi
       - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
