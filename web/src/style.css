@@ -186,3 +186,143 @@ button.primary:disabled { background: #8fa9c4; border-color: #8fa9c4; color: #ff
 @media (min-width: 1800px) {
   :root { --controls-w: 400px; font-size: 15px; }
 }
+
+
+/* Spectral Wave: the Site's visual language, with all original help retained. */
+:root {
+  --bg: #0a111c;
+  --panel: #101c2b;
+  --text: #eef5fc;
+  --muted: #afbed0;
+  --faint: #9aaec5;
+  --border: #293d53;
+  --accent: #63e3db;
+  --accent-hover: #91eee9;
+  --accent-soft: #173b43;
+  --error: #ffb4ab;
+  --error-soft: #3b2029;
+  --warn: #f8ca88;
+  --warn-soft: #382d20;
+  --ok: #8de6bc;
+  --ok-soft: #16362f;
+  --focus: #63e3db;
+  --radius: 9px;
+  --controls-w: 380px;
+  color-scheme: dark;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.topbar { align-items: center; padding: 24px 30px; gap: 20px; background: #0a111c; }
+.topbar h1 { font-size: 26px; font-weight: 600; letter-spacing: -.5px; color: var(--text); }
+.tagline { max-width: 820px; font-size: 14px; line-height: 1.6; }
+.layout { width: 100%; max-width: 1900px; margin: 0 auto; }
+.controls { background: #0e1724; padding: 24px 22px; scrollbar-color: #38516b #0e1724; }
+.group { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; padding: 0 0 19px; margin-bottom: 22px; }
+.group legend { padding: 0 0 12px; font-size: 16px; font-weight: 600; color: var(--text); }
+.group.preset { padding-bottom: 22px; }
+.label.strong { font-size: 14px; color: var(--accent); margin-bottom: 10px; }
+.preset-desc { font-size: 14px; line-height: 1.7; margin-top: 14px; }
+.field { margin-bottom: 16px; }
+.field label, .field .label { font-size: 14px; font-weight: 500; margin-bottom: 7px; }
+.field input, .field select, .field textarea, .preset select, .speed select {
+  background: #152335; border: 1px solid #405872; border-radius: 6px;
+  min-height: 42px; padding: 9px 10px; font-size: 14px;
+}
+.field input:hover:not(:disabled), .field select:hover:not(:disabled), .field textarea:hover { border-color: #7191ae; }
+.field input:disabled, .field select:disabled { background: #172330; color: #a6b6c8; }
+.field textarea { line-height: 1.6; min-height: 95px; }
+.mono { font-size: 14px !important; }
+.help { font-size: 13px; line-height: 1.65; margin: 7px 0 0; color: var(--muted); }
+.field-error { font-size: 14px; line-height: 1.5; }
+.row2 { gap: 0 16px; }
+.row3 { gap: 0 12px; }
+.pair { grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); }
+.subgroup { border-left: 2px solid #356875; padding-left: 14px; }
+.subgroup.disabled { border-left-color: #405166; }
+.note { font-size: 13px; line-height: 1.7; padding: 12px; }
+.actions { bottom: -24px; background: #0e1724; padding: 16px 0 8px; }
+.estimate { font-size: 13px; line-height: 1.6; }
+button { font-size: 14px; min-height: 42px; padding: 9px 16px; border-color: #405872; background: #192b3f; border-radius: 6px; }
+button:hover:not(:disabled) { background: #263e54; }
+button:disabled { color: #91a2b7; background: #182433; border-color: #304357; }
+button.primary { color: #082629; background: var(--accent); border-color: var(--accent); min-width: 150px; }
+button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+button.primary:disabled { color: #bbd0d0; background: #315e61; border-color: #315e61; }
+.viewer { padding: 28px 30px; gap: 14px; }
+.status-row { gap: 12px; }
+.status { font-size: 14px; padding: 9px 12px; background: #101c2b; }
+.status[data-kind="busy"] { border-color: #356875; }
+.status[data-kind="ok"] { border-color: #2e6855; }
+.status[data-kind="error"] { border-color: #7f444c; }
+.status[data-kind="warn"], .stale-banner { border-color: #755b36; }
+.warnings, .stale-banner { font-size: 14px; line-height: 1.6; }
+.result-caption { font-size: 15px; line-height: 1.6; color: var(--text); }
+.plots { gap: 18px; }
+.plots.stale { opacity: .65; filter: none; }
+.plot { padding: 16px 12px 10px; background: #0d1826; overflow: hidden; }
+.plot-density canvas { height: clamp(240px, 30vh, 390px); }
+.plot-heatmap canvas { height: clamp(260px, 34vh, 470px); }
+.plot figcaption { font-size: 13px; line-height: 1.65; padding: 10px 12px 2px; }
+.transport { gap: 12px; padding: 14px 18px; background: #101d2c; }
+.transport button { min-width: 80px; }
+.transport #play { color: var(--accent); }
+.transport input[type="range"] { min-width: 100px; }
+.frame-label { font: 14px ui-monospace, monospace; }
+.speed { font-size: 14px; }
+.readouts { gap: 0; grid-template-columns: 1fr 1fr 1.8fr; border-bottom: 1px solid var(--border); padding: 4px 0 20px; }
+.readout { border: 0; border-right: 1px solid var(--border); border-radius: 0; background: transparent; padding: 0 18px; gap: 8px; }
+.readout:first-child { padding-left: 0; }
+.readout:last-child { border-right: 0; }
+.rlabel { font-size: 13px; line-height: 1.6; }
+.readout output { font: 23px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--text); overflow-wrap: anywhere; }
+.readout.wide output { color: var(--accent); }
+.rnote { font-size: 12px; line-height: 1.6; color: var(--muted); }
+.lower { gap: 16px; margin-top: 6px; }
+.downloads, .about { padding: 16px 18px; background: #0e1928; }
+.downloads h2, .about summary { font-size: 15px; margin-bottom: 10px; }
+.about h3 { font-size: 13px; margin-top: 18px; }
+.info { font-size: 13px; line-height: 1.65; gap: 8px 12px; }
+.modified { font-size: 13px; padding: 6px 10px; }
+@media (max-width: 1100px) {
+  :root { --controls-w: 330px; }
+  .controls { padding: 22px 18px; }
+  .viewer { padding: 24px 20px; }
+  .readouts { grid-template-columns: 1fr 1fr; gap: 18px 0; }
+  .readout.wide { grid-column: 1 / -1; padding: 16px 0 0; border-top: 1px solid var(--border); }
+  .readout:nth-child(2) { border-right: 0; }
+  .lower { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .topbar { padding: 20px; gap: 10px; }
+  .topbar h1 { font-size: 24px; }
+  .layout { grid-template-columns: 1fr; }
+  .controls { position: static; max-height: none; padding: 22px 20px; }
+  .actions { position: static; }
+  .viewer { padding: 24px 14px; }
+  .plot { padding: 12px 0; }
+  .transport { padding: 12px; gap: 10px; }
+  .transport input[type="range"] { order: 5; flex-basis: 100%; min-height: 30px; }
+  .frame-label { min-width: 0; }
+  .plot figcaption { padding: 10px 16px; }
+  .readout output { font-size: 20px; }
+  .row3 { grid-template-columns: 1fr 1fr; }
+  .info { grid-template-columns: 1fr; gap: 3px; }
+  .info dd { margin-bottom: 9px; }
+}
+@media (prefers-reduced-motion: reduce) { .plots { transition: none; } }
+
+/* Short screens (a 720p laptop, which is what the professor is likely on):
+   both plots and the readouts should be reachable without hunting. Trim the
+   plot heights and the padding around them, never the help text. */
+@media (max-height: 850px) {
+  .viewer { padding: 18px 24px; gap: 10px; }
+  .status { padding: 7px 12px; }
+  .plot { padding: 10px 10px 6px; }
+  .plot-density canvas { height: clamp(170px, 24vh, 250px); }
+  .plot-heatmap canvas { height: clamp(190px, 28vh, 330px); }
+  .plot figcaption { padding: 7px 12px 0; }
+  .transport { padding: 10px 14px; }
+  .readouts { padding: 2px 0 12px; }
+  .readout output { font-size: 20px; }
+  .lower { margin-top: 2px; }
+}

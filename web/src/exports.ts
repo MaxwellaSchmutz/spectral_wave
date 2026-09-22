@@ -187,15 +187,15 @@ export function buildPng(
   canvas.height = H * scale;
   const ctx = canvas.getContext("2d")!;
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = "#0d1826";
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = "#1f2933";
+  ctx.fillStyle = "#eef5fc";
   ctx.font = '600 20px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
   ctx.fillText(title, 24, 18);
   ctx.font = '14px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-  ctx.fillStyle = "#52606d";
+  ctx.fillStyle = "#afbed0";
   ctx.fillText(subtitle, 24, 48);
 
   ctx.save();
@@ -211,3 +211,4 @@ export function buildPng(
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("PNG encoding failed"))), "image/png");
   });
 }
+

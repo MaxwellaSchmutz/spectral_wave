@@ -149,13 +149,16 @@ function build(): void {
     h("h3", {}, "Quadrature check"), infoList,
     h("h3", {}, "Software"), aboutList);
 
+  // Keep existing controls and copy; place playback next to its density plot.
+  const densityFigure = plotsBox.firstElementChild!;
+  densityFigure.after(transport, readouts);
+
   const viewer = h("main", { class: "viewer" },
     h("div", { class: "status-row" }, statusEl, elapsedEl),
     warningsEl,
     staleBanner,
     resultCaption,
     plotsBox,
-    transport, readouts,
     h("div", { class: "lower" }, downloads, about));
 
   app.append(header, h("div", { class: "layout" }, controls, viewer));
@@ -910,3 +913,4 @@ applyPreset(0);
 render();
 renderAbout();
 if (client.state === "starting") setStatus(`${STAGE_TEXT.runtime} … You can already edit the parameters.`, "busy");
+

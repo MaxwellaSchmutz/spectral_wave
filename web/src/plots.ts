@@ -17,14 +17,14 @@ export interface PlotData {
 }
 
 export const COLORS = {
-  bg: "#ffffff",
-  frame: "#9aa3ad",
-  grid: "#e7ebef",
-  text: "#1f2933",
-  faint: "#52606d",
-  curve: "#1c5d99",
-  fill: "rgba(28, 93, 153, 0.14)",
-  potential: "#c2410c",
+  bg: "#0d1826",
+  frame: "#38516b",
+  grid: "#203045",
+  text: "#eef5fc",
+  faint: "#afbed0",
+  curve: "#63e3db",
+  fill: "rgba(99, 227, 219, 0.14)",
+  potential: "#f8b56d",
   cursor: "#ffffff",
   cursorEdge: "#111111",
 };
@@ -289,13 +289,16 @@ export function drawDensity(
   const lastX = pxPerSite >= 1 ? sx(d.M) : r.x + Math.ceil(r.w) - 0.5;
   const firstX = pxPerSite >= 1 ? sx(d.N) : r.x + 0.5;
   ctx.strokeStyle = COLORS.curve;
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = 2;
   ctx.lineJoin = "round";
   ctx.stroke();
   ctx.lineTo(lastX, sy(0));
   ctx.lineTo(firstX, sy(0));
   ctx.closePath();
-  ctx.fillStyle = COLORS.fill;
+  const fill = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
+  fill.addColorStop(0, "rgba(99, 227, 219, 0.30)");
+  fill.addColorStop(1, "rgba(99, 227, 219, 0.02)");
+  ctx.fillStyle = fill;
   ctx.fill();
   // Individual site markers when there is room to see them.
   if (pxPerSite >= 5) {
@@ -458,3 +461,4 @@ export function drawEmpty(canvas: HTMLCanvasElement, message: string): void {
   ctx.textBaseline = "middle";
   ctx.fillText(message, r.x + r.w / 2, r.y + r.h / 2);
 }
+

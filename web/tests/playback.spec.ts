@@ -2,7 +2,7 @@
 // speed, redraw on resize while paused, heatmap time alignment (the cursor for
 // frame i is drawn at t_i, the centre of image row i), potential-site markers.
 import { test, expect, type Page } from "@playwright/test";
-import { MARGINS } from "../src/plots";
+import { COLORS, MARGINS } from "../src/plots";
 import {
   appState, canvasPixels, computeViaUi, linspace, openApp, rgba, selectPreset, type App, type CanvasPixels,
 } from "./support";
@@ -141,10 +141,17 @@ function countPixels(p: CanvasPixels, pred: (r: number, g: number, b: number) =>
   for (let i = 0; i < d.length; i += 4) if (pred(d[i], d[i + 1], d[i + 2])) n++;
   return n;
 }
-const isCurve = (r: number, g: number, b: number) => Math.abs(r - 0x1c) < 40 && Math.abs(g - 0x5d) < 40 && Math.abs(b - 0x99) < 40;
+// Colours come from the app's own palette, so a restyle moves these with it
+// rather than silently making the pixel counts measure nothing.
+const near = (hex: string, tol = 48) => {
+  const [R, G, B] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return (r: number, g: number, b: number) =>
+    Math.abs(r - R) < tol && Math.abs(g - G) < tol && Math.abs(b - B) < tol;
+};
+const isCurve = near(COLORS.curve);
 // Viridis runs from (68,1,84) to (253,231,37): never grey/white, blue channel never above ~160.
 const isViridis = (r: number, g: number, b: number) => b < 170 && Math.max(r, g, b) - Math.min(r, g, b) > 30;
-const isOrange = (r: number, g: number, b: number) => r > 150 && g < 120 && b < 70;
+const isOrange = near(COLORS.potential);
 
 test("plots: resize while paused redraws both canvases", async ({}, testInfo) => {
   const page = app.page;
@@ -217,12 +224,23 @@ test("plots: heatmap cursor for frame i sits at t_i; potential markers drawn", a
     const yRow = r.y + r.h - (i + 0.5) * (r.h / nT); // centre of image row i (row i = [t_i - dt/2, t_i + dt/2])
     // Scan a column at site n = N + 25% of the frame (away from the potential at 0).
     const x = Math.round((r.x + 0.25 * r.w) * dpr);
-    let sum = 0, wsum = 0;
-    for (let y = Math.floor(r.y * dpr); y < Math.ceil((r.y + r.h) * dpr); y++) {
+    // The cursor is the only near-grey thing in the column: viridis runs purple
+    // to yellow, so its min channel stays low. Take the column's own peak and
+    // weight everything above half of it, because a line on a fractional device
+    // pixel is anti-aliased across two rows at roughly half intensity each.
+    const col: number[] = [];
+    const y0 = Math.floor(r.y * dpr), y1 = Math.ceil((r.y + r.h) * dpr);
+    for (let y = y0; y < y1; y++) {
       const o = (y * p.width + x) * 4;
-      const white = Math.min(d[o], d[o + 1], d[o + 2]);
-      if (white > 180) { sum += (y + 0.5) * white; wsum += white; }
+      col.push(Math.min(d[o], d[o + 1], d[o + 2]));
     }
+    const peak = Math.max(...col);
+    expect(peak, "cursor is drawn in the scanned column").toBeGreaterThan(100);
+    const cut = peak / 2;
+    let sum = 0, wsum = 0;
+    col.forEach((white, k) => {
+      if (white >= cut) { sum += (y0 + k + 0.5) * white; wsum += white; }
+    });
     const yCursor = wsum ? sum / wsum / dpr : NaN;
     rows.push({ frame: i, t: times[i], yCursor, yAxis, yRow, rowHeight: r.h / nT });
     expect(Math.abs(yAxis - yRow), "axis mapping and image row agree").toBeLessThan(1e-6);
