@@ -1,0 +1,114 @@
+# Build, verify and deploy the browser version of spectral_wave to GitHub Pages.
+#
+# build   one checkout -> Python archive (spectral/**/*.py + source revision) + Vite site in web/dist
+# verify  tests that exact web/dist on Linux and Windows, Chromium and Firefox: browser vs native
+#         parity for every reference case, validation, cancel/jobs, playback, downloads
+# deploy  main only, after build and verify both pass
+#
+# One-time repository setting: Settings -> Pages -> Source = "GitHub Actions".
+
+name: Pages
+
+on:
+  push:
+    branches: [main, web-port]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  NUMPY_VERSION: "2.4.2"   # native reference NumPy; the browser uses Pyodide's pinned NumPy
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: python -m pip install "numpy==${{ env.NUMPY_VERSION }}"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - name: Bridge self-check (validation, convergence policy, independent references)
+        run: python web/scripts/check_bridge.py
+      - name: Build site (Python archive + type-check + Vite)
+        run: npm run build
+        working-directory: web
+        env:
+          PYTHON: python
+      - uses: actions/upload-artifact@v7
+        with:
+          name: site
+          path: web/dist
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: web/dist
+
+  verify:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: python -m pip install "numpy==${{ env.NUMPY_VERSION }}"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - uses: actions/download-artifact@v8
+        with:
+          name: site
+          path: web/dist
+      - name: Native reference results for the same checkout
+        run: python web/scripts/native_reference.py
+      - run: npx playwright install --with-deps chromium firefox
+        working-directory: web
+      - name: Browser verification (Chromium + Firefox)
+        run: npx playwright test
+        working-directory: web
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ matrix.os }}
+          path: |
+            web/playwright-report
+            web/test-results
+          retention-days: 14
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [build, verify]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

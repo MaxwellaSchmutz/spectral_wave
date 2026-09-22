@@ -41,6 +41,7 @@ from matplotlib.figure import Figure
 from matplotlib import rcParams as _rc
 
 from spectral.maxwell import MaxwellSpec, maxwell_to_frames
+from spectral.maxwell import presets as _presets
 
 _rc.update({
     "font.family":     "sans-serif",
@@ -275,126 +276,55 @@ QToolTip {{
 # =====================================================================
 # Preset library
 # =====================================================================
+# Preset values live in spectral/maxwell/presets.py (shared with the web
+# build); this turns each canonical params dict into the form-field strings
+# _preset_changed fills in. Numbers are written so the form parses back to the
+# exact same values (float(text) == value): integral values without ".0"
+# ("2, 1", "[[[0, 1], [1, 0]]]", t "0" .. "50"), everything else as repr.
+def _num_text(x: float) -> str:
+    x = float(x)
+    if x.is_integer() and abs(x) < 2.0 ** 53 and not (x == 0 and np.signbit(x)):
+        return str(int(x))
+    return repr(x)
+
+
+def _v_entry_text(re: float, im: float) -> str:
+    if im == 0:
+        return _num_text(re)
+    if re == 0:
+        return f"{_num_text(im)}j"
+    return f"({_num_text(re)}{'+' if im >= 0 else '-'}{_num_text(abs(im))}j)"
+
+
+def _preset_fields(params: dict) -> dict:
+    tm = params["times"]
+    amp = params["amplitude"]
+    if amp["mode"] == "schober_window":
+        amp = _presets.WINDOW_FORM_GAUSSIAN
+    V = params["V_sites"]
+    return dict(
+        L=str(params["L"]), a=", ".join(_num_text(x) for x in params["a"]),
+        N=str(params["N"]), M=str(params["M"]),
+        j_sites=", ".join(str(j) for j in params["j_sites"]),
+        V_sites="[" + ", ".join(
+            "[" + ", ".join(
+                "[" + ", ".join(_v_entry_text(re, im) for re, im in row) + "]"
+                for row in site) + "]"
+            for site in V) + "]",
+        interval_lo=_num_text(params["interval"][0]),
+        interval_hi=_num_text(params["interval"][1]),
+        E0=_num_text(amp["E0"]), sigma_E=_num_text(amp["sigma_E"]),
+        sigma_mode=amp["direction"], n_init=str(amp["n_init"]),
+        n_t=str(tm["n_t"]), t_min=_num_text(tm["t_min"]), t_max=_num_text(tm["t_max"]),
+        n_quad=str(params["n_quad"]),
+        outer="+" if params["outer_sign"] == 1 else "-",
+    )
+
+
 PRESETS: dict[str, dict | None] = {
-    "Free Gaussian Wave Packet": dict(
-        L="1", a="1.0", N="-120", M="120",
-        j_sites="", V_sites="[]",
-        interval_lo="-1.5", interval_hi="1.5",
-        E0="0.0", sigma_E="0.30",
-        sigma_mode="right", n_init="0",
-        n_t="120", t_min="0", t_max="50", n_quad="128",
-        outer="+",
-    ),
-    "Single Barrier — partial reflection": dict(
-        L="1", a="1.0", N="-100", M="100",
-        j_sites="0", V_sites="[[[0.6]]]",
-        interval_lo="-1.5", interval_hi="1.5",
-        E0="0.0", sigma_E="0.25",
-        sigma_mode="right", n_init="0",
-        n_t="140", t_min="0", t_max="55", n_quad="128",
-        outer="+",
-    ),
-    "Single Well — attractive site": dict(
-        L="1", a="1.0", N="-100", M="100",
-        j_sites="0", V_sites="[[[-0.8]]]",
-        interval_lo="-1.5", interval_hi="1.5",
-        E0="0.0", sigma_E="0.25",
-        sigma_mode="right", n_init="0",
-        n_t="140", t_min="0", t_max="55", n_quad="128",
-        outer="+",
-    ),
-    "Double Barrier — resonant cavity": dict(
-        L="1", a="1.0", N="-130", M="130",
-        j_sites="-6, 6", V_sites="[[[0.55]], [[0.55]]]",
-        interval_lo="-1.3", interval_hi="1.3",
-        E0="0.0", sigma_E="0.20",
-        sigma_mode="right", n_init="0",
-        n_t="160", t_min="0", t_max="65", n_quad="128",
-        outer="+",
-    ),
-    "Strong Wall — near-total reflection": dict(
-        L="1", a="1.0", N="-100", M="100",
-        j_sites="0", V_sites="[[[3.5]]]",
-        interval_lo="-1.5", interval_hi="1.5",
-        E0="0.0", sigma_E="0.30",
-        sigma_mode="right", n_init="0",
-        n_t="120", t_min="0", t_max="50", n_quad="128",
-        outer="+",
-    ),
-    "Weak Barrier — small kick": dict(
-        L="1", a="1.0", N="-100", M="100",
-        j_sites="0", V_sites="[[[0.12]]]",
-        interval_lo="-1.5", interval_hi="1.5",
-        E0="0.0", sigma_E="0.30",
-        sigma_mode="right", n_init="0",
-        n_t="120", t_min="0", t_max="50", n_quad="128",
-        outer="+",
-    ),
-    "Wide Barrier — tunneling": dict(
-        L="1", a="1.0", N="-130", M="130",
-        j_sites="-3, -1, 1, 3", V_sites="[[[0.45]], [[0.45]], [[0.45]], [[0.45]]]",
-        interval_lo="-1.5", interval_hi="1.5",
-        E0="0.0", sigma_E="0.20",
-        sigma_mode="right", n_init="0",
-        n_t="140", t_min="0", t_max="55", n_quad="144",
-        outer="+",
-    ),
-    "Random Lattice (L=1)": dict(
-        L="1", a="1.0", N="-130", M="130",
-        j_sites="-9, -4, 0, 5, 11", V_sites="[[[0.30]], [[-0.40]], [[0.55]], [[-0.20]], [[0.35]]]",
-        interval_lo="-1.5", interval_hi="1.5",
-        E0="0.0", sigma_E="0.25",
-        sigma_mode="right", n_init="0",
-        n_t="160", t_min="0", t_max="60", n_quad="144",
-        outer="+",
-    ),
-    "Two-Channel Free (L=2)": dict(
-        L="2", a="1.0, 0.6", N="-100", M="100",
-        j_sites="", V_sites="[]",
-        interval_lo="-0.9", interval_hi="0.9",
-        E0="0.0", sigma_E="0.20",
-        sigma_mode="right", n_init="0",
-        n_t="140", t_min="0", t_max="60", n_quad="128",
-        outer="+",
-    ),
-    "Two-Channel Coupled Scatterer (L=2)": dict(
-        L="2", a="1.0, 0.6", N="-100", M="100",
-        j_sites="0", V_sites="[[[0.40, 0.25j], [-0.25j, -0.20]]]",
-        interval_lo="-0.9", interval_hi="0.9",
-        E0="0.0", sigma_E="0.20",
-        sigma_mode="right", n_init="0",
-        n_t="140", t_min="0", t_max="60", n_quad="128",
-        outer="+",
-    ),
-    "Slow Packet — near band edge": dict(
-        L="1", a="1.0", N="-80", M="80",
-        j_sites="", V_sites="[]",
-        interval_lo="-1.95", interval_hi="-1.40",
-        E0="-1.65", sigma_E="0.12",
-        sigma_mode="right", n_init="0",
-        n_t="120", t_min="0", t_max="80", n_quad="80",
-        outer="+",
-    ),
-    "Schober 1 — two-channel window": dict(
-        L="2", a="2, 1", N="-10", M="10",
-        j_sites="0", V_sites="[[[0, 1], [1, 0]]]",
-        interval_lo="-0.7", interval_hi="0.6",
-        E0="0.5", sigma_E="0.1",
-        sigma_mode="balanced", n_init="0",
-        n_t="160", t_min="-8", t_max="8", n_quad="200",
-        outer="+",
-    ),
-    "Schober 2 — two-channel + barrier": dict(
-        L="2", a="2, 1", N="-100", M="100",
-        j_sites="0, 40", V_sites="[[[0, 1], [1, 0]], [[5, 0], [0, -3]]]",
-        interval_lo="-0.7", interval_hi="0.6",
-        E0="0.5", sigma_E="0.1",
-        sigma_mode="balanced", n_init="0",
-        n_t="200", t_min="-40", t_max="40", n_quad="200",
-        outer="+",
-    ),
-    "Custom — edit fields below": None,
+    name: _preset_fields(params) for name, params in _presets.PRESETS.items()
 }
+PRESETS["Custom — edit fields below"] = None
 
 
 PRESET_DESCRIPTIONS: dict[str, str] = {
@@ -452,9 +382,9 @@ PRESET_DESCRIPTIONS: dict[str, str] = {
 # weights on the two σ channels. Balanced (1,1) gives Schober's
 # standing packet; right / left select a single propagation direction.
 SIGMA_MODES: dict[str, tuple[float, float]] = {
-    "balanced (1,1)": (1.0, 1.0),
-    "right (1,0)":    (1.0, 0.0),
-    "left (0,1)":     (0.0, 1.0),
+    "balanced (1,1)": _presets.DIRECTION_WEIGHTS["balanced"],
+    "right (1,0)":    _presets.DIRECTION_WEIGHTS["right"],
+    "left (0,1)":     _presets.DIRECTION_WEIGHTS["left"],
 }
 
 
@@ -481,30 +411,21 @@ def min_nquad(N, M, t_min, t_max, lo, hi, a_list) -> int:
 # Schober's window presets use a step-function f (indicator on [c, d]) with per-
 # channel / per-sigma amplitudes, which the Gaussian form fields cannot express.
 # _build_spec uses these directly (keyed by preset name) instead of the form f.
-def _schober_window_f(E):
-    """f_{1,+/-}=1 on [0.4,0.6]; f_{2,+}=1 on [-0.7,-0.5]; f_{2,-}=0. (L=2)"""
-    E = np.asarray(E, dtype=float)
-    out = np.zeros((E.size, 2, 2), dtype=complex)
-    ch1 = (E >= 0.4) & (E <= 0.6)
-    ch2 = (E >= -0.7) & (E <= -0.5)
-    out[ch1, 0, 0] = 1.0   # f_{1,+}
-    out[ch1, 0, 1] = 1.0   # f_{1,-}
-    out[ch2, 1, 0] = 1.0   # f_{2,+}
-    return out
+_schober_window_f = _presets.schober_window_f
 
+_WINDOW_PRESETS = [
+    name for name, params in _presets.PRESETS.items()
+    if params["amplitude"]["mode"] == "schober_window"
+]
 
-PRESET_F = {
-    "Schober 1 — two-channel window": _schober_window_f,
-    "Schober 2 — two-channel + barrier": _schober_window_f,
-}
+PRESET_F = {name: _schober_window_f for name in _WINDOW_PRESETS}
 
 
 # Energy windows matching _schober_window_f's support. _build_spec passes these
 # as MaxwellSpec.E_segments so quadrature runs per-window (spectrally convergent
 # for step-function f) instead of one rule across all of `interval`.
 PRESET_SEGMENTS = {
-    "Schober 1 — two-channel window": [(-0.7, -0.5), (0.4, 0.6)],
-    "Schober 2 — two-channel + barrier": [(-0.7, -0.5), (0.4, 0.6)],
+    name: list(_presets.SCHOBER_E_SEGMENTS) for name in _WINDOW_PRESETS
 }
 
 
@@ -1750,16 +1671,8 @@ class MainWindow(QMainWindow):
             # Gaussian f: sigma-mode weights h± scale the two σ
             # channels, and the θ(E) phase parks the packet at lattice site
             # n_init at t=0. Single channel l₀=0; other channels stay zero.
-            a0 = float(a[0])
-
-            def f(E):
-                E = np.asarray(E, dtype=float)
-                env = np.exp(-((E - E0) ** 2) / (2.0 * sigma_E ** 2))
-                theta = np.arccos(np.clip(E / (2.0 * a0), -1.0, 1.0))
-                out = np.zeros((E.size, L, 2), dtype=complex)
-                out[:, 0, 0] = h_plus  * env * np.exp(+1j * n_init * theta)
-                out[:, 0, 1] = h_minus * env * np.exp(-1j * n_init * theta)
-                return out
+            f = _presets.gaussian_f(L, float(a[0]), E0, sigma_E,
+                                    h_plus, h_minus, n_init)
 
         spec = MaxwellSpec(
             L=L, a=a, N=N, M=M,

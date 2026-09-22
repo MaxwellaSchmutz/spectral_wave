@@ -11,6 +11,17 @@ for me. The math behind it is his and his coauthor's — four papers, all in
 cited below; `3_GeneralizedFourier(2025).pdf` is the superseded 2025 version,
 kept for reference — its theorem numbers differ.
 
+**Run it in your browser, nothing to install:**
+<https://maxwellaschmutz.github.io/spectral_wave/>
+
+The browser version runs this same Python package, unchanged, inside the page
+(via [Pyodide](https://pyodide.org)); nothing is sent to a server. It has all
+thirteen presets, every parameter below, playback, and downloads of the
+parameters and the computed ψ(n, t) (`.json`, `.npz`, `.csv`, `.png`). Before
+showing a result it checks the energy quadrature by recomputing at twice the
+nodes, and it tells you when the packet has left the displayed frame. Video
+export is desktop-only.
+
 ## What you're actually looking at
 
 Normally you'd think of a particle moving through continuous space. Here space
@@ -207,10 +218,12 @@ without asking him.
 ## Layout
 
     spectral/maxwell/   the algorithm (see the step table above)
-    gui/                the viewer
-    docs/               the papers
+    spectral/browser.py the browser's entry point: input checks, memory limits,
+                        the quadrature convergence check
+    gui/                the desktop viewer
+    web/                the browser version (Vite + TypeScript, Pyodide worker)
+    docs/               the papers, and AUDIT.md (what's verified, what's still broken)
     main.py             start here
-    AUDIT.md            what's verified, what's still broken
 
 To use it without the GUI:
 
@@ -220,3 +233,35 @@ To use it without the GUI:
 
 `MaxwellSpec` in `spectral/maxwell/model.py` is the "Data" block from the spec
 — same fields, same names, same order.
+
+## The browser version: build, test, deploy
+
+The thirteen presets live in `spectral/maxwell/presets.py`, shared by the
+desktop viewer and the web page, so both compute exactly the same thing. The
+build zips `spectral/**/*.py` (tagged with the git commit it came from) and the
+page loads it into Pyodide 314.0.7 (Python 3.14.2, NumPy 2.4.6) from the
+jsDelivr CDN. No PyQt, matplotlib or ffmpeg goes into the browser.
+
+Needs Node 24 and a Python with NumPy (the repo's `.venv` is picked up
+automatically; otherwise set `PYTHON`):
+
+    cd web
+    npm ci
+    npm run build                          # Python archive + type-check + web/dist
+    npx vite preview                       # http://localhost:4173/spectral_wave/
+
+Checks, from the repo root:
+
+    python web/scripts/check_bridge.py     # input checks, convergence policy, exact references
+    python web/scripts/native_reference.py # native results the browser must reproduce
+    cd web && npx playwright install chromium firefox && npx playwright test
+
+The Playwright run compares every preset (both outer signs) and a few extra
+cases element by element against native NumPy (rtol 1e-9, atol 1e-11), and
+exercises validation, Cancel, playback and the downloads. To run it against the
+live site instead, set `SW_BASE_URL=https://maxwellaschmutz.github.io/spectral_wave/`.
+
+Deployment is automatic: `.github/workflows/pages.yml` builds the site, runs
+all of the above on Linux and Windows in Chromium and Firefox, and publishes
+to GitHub Pages only when a push to `main` passes. (Repository setting, once:
+Settings → Pages → Source = GitHub Actions.)
