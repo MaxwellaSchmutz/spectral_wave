@@ -5,8 +5,10 @@
 Prints PASS/FAIL per check and exits non-zero if any check fails. Covers:
   - every invalid-input class the bridge contract lists (plus the budget),
     each rejected with the right kind and field and never raised;
-  - the memory model against real process peaks (fresh process per run,
-    OS counters; measure_memory.py), incl. node generation at 8192 nodes;
+  - the memory model against real process peaks (fresh process per run, OS
+    counters minus a do-nothing baseline child; measure_memory.py), the
+    measurement harness itself against an emulated fork() floor, and node
+    generation at 8192 nodes;
   - label-first validation messages and the strict (rtol 0) Hermitian test;
   - the convergence policy on the two audit failure repros and on a case
     that cannot converge within the refinement cap, with advice that
@@ -32,6 +34,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import os
 import sys
 import time
 
@@ -275,6 +278,63 @@ def check_internal_and_callbacks():
           "a raising on_stage callback does not break the run")
 
 
+def check_measurement_harness():
+    """The peak the memory checks compare must be the WORK's peak.
+
+    A child process's raw peak also carries whatever the harness put there,
+    and on Linux that was once the entire number: subprocess forks, a forked
+    child's RSS starts equal to its parent's (copy-on-write pages count), and
+    exec latches that high-water mark into the child's accounting, so
+    getrusage(RUSAGE_SELF).ru_maxrss can never report less than the RSS this
+    process had when it spawned the child. Every configuration then measured
+    the same few hundred MB and every bound below failed on CI while passing
+    on Windows, which has no fork. measure_memory now reads VmHWM (the
+    post-exec mapping's own high-water) on Linux AND subtracts a do-nothing
+    baseline child spawned from the same parent state, so anything the two
+    children share cancels whatever the counter's exec semantics are.
+
+    Windows cannot produce a fork floor to test that against, so one is
+    emulated exactly: SPECTRAL_MEASURE_FAKE_FLOOR_MB raises a child's peak
+    counters to at least that value, like an inherited high-water mark. The
+    raw peak must then jump to it -- reproducing the CI failure -- while the
+    baseline-corrected number must not move. A floor ABOVE the work's own
+    peak hides the work rather than inflating it, so the corrected number is
+    a lower bound there (clamped at 0), never an over-estimate: it cannot
+    fail a sound model, and the reason Linux reads VmHWM is so that no such
+    floor exists to begin with.
+    """
+    from measure_memory import FAKE_FLOOR_ENV, spawn
+
+    p = with_(FREE, N=-300, M=300, n_quad=512)
+    job = {"name": "measurement harness self-test", "mode": "run", "params": p}
+    plain = spawn(job)
+    v = browser._validate(json.loads(json.dumps(p)))
+    est = (browser._plan_bytes(v, plain["used"], True) if plain.get("meta_ok")
+           else browser.MAX_PEAK_BYTES)
+    check(plain["measured"] == max(0, plain["peak_raw"] - plain["baseline"])
+          and 0 < plain["measured"] <= est,
+          "measured peak = raw child peak - baseline child peak (same imports, no work)",
+          f"raw {plain['peak_raw'] / 1e6:.1f} - baseline {plain['baseline'] / 1e6:.1f} "
+          f"= {plain['measured'] / 1e6:.1f} MB <= predicted {est / 1e6:.1f} MB")
+
+    floor_mb = 900.0                     # above anything this run can really reach
+    os.environ[FAKE_FLOOR_ENV] = str(floor_mb)
+    try:
+        faked = spawn(job)
+    finally:
+        os.environ.pop(FAKE_FLOOR_ENV, None)
+    check(faked["peak_raw"] > est and faked["baseline"] > est,
+          f"an emulated fork() floor ({floor_mb:.0f} MB) does reach the raw child peak "
+          "(the Linux failure, reproduced on any platform)",
+          f"raw {faked['peak_raw'] / 1e6:.1f} MB, baseline {faked['baseline'] / 1e6:.1f} MB "
+          f"vs predicted {est / 1e6:.1f} MB: an uncorrected check fails here")
+    check(faked["measured"] <= plain["measured"] + 1e6 and faked["measured"] <= est,
+          "the baseline child subtracts that floor back out: the measured peak does not "
+          "move, so the bound checks stay platform-independent",
+          f"measured {faked['measured'] / 1e6:.1f} MB with the floor vs "
+          f"{plain['measured'] / 1e6:.1f} MB without; predicted {est / 1e6:.1f} MB")
+
+
 def check_estimate():
     est = json.loads(browser.estimate_json(json.dumps(FREE)))
     check(est["ok"] and est["bytes_result"] == 8 * 120 * 241 and est["bytes_peak"] > 0,
@@ -304,8 +364,9 @@ def check_estimate():
           f"n_quad {best}: estimate {meta.get('memory_estimate_bytes', 0) / 1e6:,.0f} MB")
 
     # P2: the estimate bounds the REAL process peak of a whole run() (fresh
-    # process each, OS counters -- see measure_memory.py), including the
-    # check run, refinement, and many-site / many-channel frames
+    # process each, OS counters, minus a do-nothing baseline child spawned
+    # from the same parent -- see measure_memory.spawn), including the check
+    # run, refinement, and many-site / many-channel frames
     from measure_memory import make_params, spawn
     configs = [("free wide", with_(FREE, N=-300, M=300, n_quad=512)),
                ("two-channel coupled n256", with_(COUPLED, n_quad=256)),
@@ -325,8 +386,11 @@ def check_estimate():
             what = res["error"]["kind"]
         check(res["measured"] <= est and res["measured"] <= browser.MAX_PEAK_BYTES,
               f"memory model bounds the real run() peak ({name})",
-              f"{what}: measured {res['measured'] / 1e6:.1f} MB <= "
-              f"{est / 1e6:.1f} MB (ratio {res['measured'] / est:.2f})")
+              f"{what}: measured {res['measured'] / 1e6:.1f} MB <= predicted "
+              f"{est / 1e6:.1f} MB (ratio {res['measured'] / est:.2f}); "
+              f"raw peak {res['peak_raw'] / 1e6:.1f} - baseline "
+              f"{res['baseline'] / 1e6:.1f} MB, budget "
+              f"{browser.MAX_PEAK_BYTES / 1e6:.0f} MB")
 
 
 # ---------------------------------------------------------------------- #
@@ -601,6 +665,7 @@ def main() -> int:
     check_invalid()
     check_messages_and_misc()
     check_internal_and_callbacks()
+    check_measurement_harness()
     check_estimate()
     check_policy()
     check_cache()

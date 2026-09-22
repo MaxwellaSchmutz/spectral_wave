@@ -7,21 +7,33 @@ with --child), single-threaded BLAS (OPENBLAS_NUM_THREADS=1, like the wasm
 build). The child builds its inputs, collects garbage, reads its current
 working set and commit, runs the work, and reports
 
-    measured = max(peak working set - working set before,
-                   peak commit      - commit before)
+    raw = max(peak working set - working set before,
+              peak commit      - commit before)
 
 from the OS counters (Windows: K32GetProcessMemoryInfo PeakWorkingSetSize /
-PeakPagefileUsage; elsewhere ru_maxrss), so memory NumPy never reports to
-tracemalloc -- LAPACK's copy of the n x n companion matrix inside
-numpy.polynomial.legendre.leggauss, BLAS buffers -- is counted. The
-counters are monotonic, so a measurement can only overstate the work's own
-peak (by at most the "floor" column: peak-before minus current-before).
+PeakPagefileUsage; Linux: /proc/self/status VmHWM; elsewhere ru_maxrss), so
+memory NumPy never reports to tracemalloc -- LAPACK's copy of the n x n
+companion matrix inside numpy.polynomial.legendre.leggauss, BLAS buffers --
+is counted. The counters are monotonic, so raw can only overstate the work's
+own peak (by at most the "floor" column: peak-before minus current-before).
+
+Every measurement is paired with a BASELINE child spawned back to back with
+it from the same parent state: the same process, the same imports (NumPy,
+spectral.browser), no work. What it reports is everything the number owes to
+the harness rather than to the work, and
+
+    measured = max(0, raw - baseline)
+
+is what the model is checked against. See spawn() for why a raw peak is not
+trustworthy on its own (fork() + ru_maxrss made every Linux measurement
+report the parent's RSS).
 
 Modes per row:
   compute  one compute_psi at the given n_quad (what the model predicts)
   run      a whole spectral.browser.run() (check run, refinement, copies),
            compared with the plan the bridge budgeted
   nodes    Gauss-Legendre node generation alone
+  baseline the imports and nothing else (the correction described above)
 
 --fit prints a non-negative least-squares fit (relative error) of the
 compute rows to the model's feature terms, with the node term held at its
@@ -47,6 +59,48 @@ _PYTHON = sys.executable
 # ---------------------------------------------------------------------- #
 # Process counters                                                       #
 # ---------------------------------------------------------------------- #
+
+FAKE_FLOOR_ENV = "SPECTRAL_MEASURE_FAKE_FLOOR_MB"
+
+
+def _posix_counters() -> dict:
+    """Current / peak RSS from /proc/self/status, else ru_maxrss.
+
+    ru_maxrss must NOT be used on its own on Linux. subprocess starts a child
+    with fork() + exec(); the forked child's RSS starts out equal to the
+    PARENT's (copy-on-write pages count towards RSS), and on exec the kernel
+    latches that high-water mark into the new process's accounting
+    (exec_mmap -> setmax_mm_hiwater_rss(&signal->maxrss, old_mm)). So
+    getrusage(RUSAGE_SELF).ru_maxrss in the child never reports less than the
+    parent's RSS at spawn time. A parent that has done a few hundred MB of
+    work therefore makes every child report that same floor regardless of
+    what the child does -- which is exactly what CI showed (every case
+    530.5 MB) while Windows, which has no fork, was fine.
+
+    VmHWM is the high-water mark of the post-exec mm alone: the pages the
+    forked child shared with its parent belonged to the mm that exec threw
+    away, so they are not in it. macOS has no /proc and keeps ru_maxrss's
+    fork behaviour; there the baseline subtraction in spawn() is the only
+    correction, and it can only under-report, never over-report.
+    """
+    rss = peak = None
+    try:
+        with open("/proc/self/status", encoding="ascii") as fh:
+            for line in fh:
+                if line.startswith("VmHWM:"):
+                    peak = int(line.split()[1]) * 1024
+                elif line.startswith("VmRSS:"):
+                    rss = int(line.split()[1]) * 1024
+    except OSError:
+        pass
+    if peak is None:
+        import resource
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        peak *= 1 if sys.platform == "darwin" else 1024
+    if rss is None:
+        rss = peak                       # no cheap current RSS (macOS)
+    return {"ws": rss, "peak_ws": peak, "commit": rss, "peak_commit": peak}
+
 
 def _counters() -> dict:
     if sys.platform == "win32":
@@ -74,14 +128,21 @@ def _counters() -> dict:
         if not k32.K32GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(pmc),
                                            pmc.cb):
             raise OSError(ctypes.get_last_error(), "K32GetProcessMemoryInfo failed")
-        return {"ws": pmc.WorkingSetSize, "peak_ws": pmc.PeakWorkingSetSize,
-                "commit": pmc.PagefileUsage, "peak_commit": pmc.PeakPagefileUsage}
-    import resource
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    peak *= 1 if sys.platform == "darwin" else 1024
-    with open("/proc/self/statm") as fh:
-        rss = int(fh.read().split()[1]) * os.sysconf("SC_PAGE_SIZE")
-    return {"ws": rss, "peak_ws": peak, "commit": rss, "peak_commit": peak}
+        c = {"ws": pmc.WorkingSetSize, "peak_ws": pmc.PeakWorkingSetSize,
+             "commit": pmc.PagefileUsage, "peak_commit": pmc.PeakPagefileUsage}
+    else:
+        c = _posix_counters()
+    fake = os.environ.get(FAKE_FLOOR_ENV)
+    if fake:
+        # Test hook (check_bridge.check_measurement_harness): emulate the
+        # inherited high-water mark a fork()ed child reports on Linux -- a
+        # floor under the peak counters that owes nothing to this process's
+        # work. Windows cannot produce one, so this is how the correction is
+        # exercised on a developer machine.
+        floor = int(float(fake) * 1e6)
+        c["peak_ws"] = max(c["peak_ws"], floor)
+        c["peak_commit"] = max(c["peak_commit"], floor)
+    return c
 
 
 def _child(job: dict) -> dict:
@@ -106,6 +167,9 @@ def _child(job: dict) -> dict:
         work = lambda: browser.run(text, None, None)  # noqa: E731
     elif mode == "nodes":
         work = lambda: gauss_legendre(-1.0, 1.0, job["n_quad"])  # noqa: E731
+    elif mode == "baseline":
+        # same process, same imports above (NumPy, spectral.browser), no work
+        work = lambda: None                     # noqa: E731
     else:
         raise SystemExit(f"unknown mode {mode}")
     np.zeros(16).sum()
@@ -230,7 +294,10 @@ def run_rows():
     return rows
 
 
-def spawn(job: dict) -> dict:
+BASELINE_JOB = {"name": "baseline", "mode": "baseline", "params": None}
+
+
+def _spawn_one(job: dict) -> dict:
     env = dict(os.environ, OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1",
                MKL_NUM_THREADS="1", PYTHONDONTWRITEBYTECODE="1")
     out = subprocess.run([_PYTHON, __file__, "--child"], input=json.dumps(job),
@@ -238,6 +305,40 @@ def spawn(job: dict) -> dict:
     if out.returncode != 0:
         raise SystemExit(f"child failed for {job['name']}:\n{out.stderr}")
     return json.loads(out.stdout.strip().splitlines()[-1])
+
+
+def spawn(job: dict, baseline: bool = True) -> dict:
+    """Measure one configuration, corrected by a do-nothing baseline child.
+
+    A child's raw peak is not the work's peak: it also carries whatever the
+    harness put there. On Linux that used to be the whole number -- children
+    are forked, and a forked child's ru_maxrss can never fall below the RSS
+    its parent had at spawn time (see _posix_counters), so every case
+    reported the same few hundred MB. Reading VmHWM removes that particular
+    floor, but a measurement should not depend on believing any one
+    counter's exec semantics, so what is compared against the model is
+
+        measured = max(0, raw - baseline)
+
+    where the baseline is a child spawned the same way, from the same parent,
+    immediately before this one: same imports, no work. Anything both
+    children have in common -- interpreter and NumPy start-up, BLAS
+    scratch, an inherited peak -- cancels.
+
+    The baseline is re-measured for every configuration because the parent
+    keeps allocating as it works, so a baseline taken once at the start would
+    not describe the children spawned later. Both raw and baseline are kept
+    in the result for diagnosis; a floor that exceeds the work's own peak
+    cannot be undone by any subtraction, and makes `measured` a lower bound
+    (it is clamped at 0), never an over-estimate.
+    """
+    base = _spawn_one(BASELINE_JOB) if baseline else None
+    res = _spawn_one(job)
+    res["peak_raw"] = res["measured"]
+    res["baseline"] = base["measured"] if base else 0
+    res["baseline_floor"] = base["floor"] if base else 0
+    res["measured"] = max(0, res["peak_raw"] - res["baseline"])
+    return res
 
 
 # ---------------------------------------------------------------------- #
@@ -302,8 +403,8 @@ def main() -> int:
     if args.saved:
         with open(args.saved, encoding="utf-8") as fh:
             saved = json.load(fh)
-        keep = ("measured", "floor", "seconds", "meta_ok", "status", "used", "check",
-                "estimate", "error")
+        keep = ("measured", "peak_raw", "baseline", "baseline_floor", "floor", "seconds",
+                "meta_ok", "status", "used", "check", "estimate", "error")
         jobs = [(dict(name=r["name"].split(" [")[0], mode=r["mode"], params=r["params"],
                       **({"n_quad": r["n_quad"]} if "n_quad" in r else {})),
                  {k: r[k] for k in keep if k in r}) for r in saved]
@@ -318,8 +419,8 @@ def main() -> int:
         jobs = [(j, None) for j in jobs]
     results = []
     worst = 0.0
-    print(f"{'config':40s} {'measured MB':>12s} {'predicted MB':>13s} {'ratio':>6s} "
-          f"{'floor MB':>9s}")
+    print(f"{'config':40s} {'measured MB':>12s} {'raw MB':>8s} {'base MB':>8s} "
+          f"{'predicted MB':>13s} {'ratio':>6s} {'floor MB':>9s}")
     for job, res in jobs:
         if res is None:
             res = spawn(job)
@@ -343,6 +444,8 @@ def main() -> int:
         if not (job["mode"] == "run" and not res.get("meta_ok")):
             worst = max(worst, ratio)
         print(f"{row['name'][:40]:40s} {row['measured'] / 1e6:12.2f} "
+              f"{row.get('peak_raw', row['measured']) / 1e6:8.2f} "
+              f"{row.get('baseline', 0) / 1e6:8.2f} "
               f"{row['predicted'] / 1e6:13.2f} {ratio:6.3f} {row['floor'] / 1e6:9.2f}",
               flush=True)
         results.append(row)

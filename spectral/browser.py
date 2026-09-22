@@ -85,9 +85,13 @@ HERMITIAN_ATOL = 1e-10           # max|V - V^H| allowed, absolute (rtol 0): stri
 #
 # Calibrated by web/scripts/measure_memory.py against REAL process peaks
 # (not tracemalloc, which misses LAPACK's copy): every configuration runs in
-# a fresh process with single-threaded BLAS, and the peak is the rise in
-# Windows PeakWorkingSetSize / PeakPagefileUsage above the working set just
-# before the call (NumPy 2.4.2, Python 3.13). Coefficients are a
+# a fresh process with single-threaded BLAS, and the peak is the rise in the
+# OS counters (Windows PeakWorkingSetSize / PeakPagefileUsage, Linux
+# /proc/self/status VmHWM) above the working set just before the call, minus
+# what a do-nothing child spawned from the same parent reports -- so nothing
+# the harness itself put in the counters is charged to the model (NumPy
+# 2.4.2, Python 3.13; that correction is worth about 1.6 MB per row on
+# Windows). Coefficients are a
 # non-negative least-squares fit (relative error) over 39 compute_psi runs,
 # L = 1..6, K = 0..48, n_E = 32..8192, n_s = 21..2001, n_t = 50..2000,
 # single interval and Schober E_segments; the node coefficient is the
@@ -97,23 +101,23 @@ HERMITIAN_ATOL = 1e-10           # max|V - V^H| allowed, absolute (rtol 0): stri
 # segments are generated one after another (Schober 1 at 8192 nodes peaks
 # like a single 4096-node rule). Measured / predicted, MB:
 #
-#   nodes only n8192          1112 / 1390   L1 K0  n128  s241      37 /   48
-#   L1 K0  n4096 s201          304 /  451   L1 K0  n8192 s21     1112 / 1405
-#   L1 K1  n2048 s401          218 /  304   L1 K40 n256  s201     171 /  195
-#   L1 K48 n128  s401          197 /  222   L1 K40 n512  s301     444 /  496
-#   L2 K1  n1024 s401          377 /  387   L2 K40 n256  s201     336 /  501
-#   L3 K40 n128  s201          373 /  504   L4 K40 n64   s201     335 /  430
-#   L5 K5  n192  s241          413 /  451   L5 K40 n64   s201     503 /  624
-#   L6 K2  n128  s201          247 /  253   L6 K40 n64   s201     709 /  858
-#   L1 K1  n256  s2001 t2000   189 /  238   Schober 2 n1600       345 /  389
-#   Schober 2 n8192           1624 / 2343   Schober 1 n8192       304 /  852
+#   nodes only n8192          1110 / 1390   L1 K0  n128  s241      35 /   48
+#   L1 K0  n4096 s201          303 /  451   L1 K0  n8192 s21     1111 / 1405
+#   L1 K1  n2048 s401          218 /  304   L1 K40 n256  s201     170 /  195
+#   L1 K48 n128  s401          195 /  222   L1 K40 n512  s301     443 /  496
+#   L2 K1  n1024 s401          376 /  387   L2 K40 n256  s201     336 /  501
+#   L3 K40 n128  s201          371 /  504   L4 K40 n64   s201     333 /  430
+#   L5 K5  n192  s241          412 /  451   L5 K40 n64   s201     500 /  624
+#   L6 K2  n128  s201          245 /  253   L6 K40 n64   s201     706 /  858
+#   L1 K1  n256  s2001 t2000   187 /  238   Schober 2 n1600       343 /  389
+#   Schober 2 n8192           1623 / 2343   Schober 1 n8192       303 /  852
 # Whole run() calls (check run, refinement, held results) vs the largest
 # plan the bridge budgeted (_plan_bytes):
-#   Free Gaussian (verified)    41 /   53   Schober 2 (verified)  113 / 128
-#   audit wide frame (refined)  76 /   90   audit narrow (refined) 81 / 111
-#   L1 K40 n256 (verified)     308 /  348   L1 n2048 s41 (verif.) 305 / 396
-#   L6 K10 n64 (unresolved: stopped at the budget)                487 / 552
-# Worst measured / predicted over all 52 rows: 0.978.
+#   Free Gaussian (verified)    40 /   53   Schober 2 (verified)  111 / 128
+#   audit wide frame (refined)  74 /   90   audit narrow (refined) 79 / 111
+#   L1 K40 n256 (verified)     306 /  348   L1 n2048 s41 (verif.) 303 / 396
+#   L6 K10 n64 (unresolved: stopped at the budget)                485 / 552
+# Worst measured / predicted over all 52 rows: 0.971.
 #
 # A run() holds up to two results at once and the worker copies the returned
 # one out of the wasm heap and transfers it, so the budget adds 4 result
