@@ -7,6 +7,8 @@ waterfall heatmap of psi over the full time horizon.
 
 from __future__ import annotations
 
+import ast
+
 
 import numpy as np
 from PyQt6.QtCore import (
@@ -327,55 +329,23 @@ PRESETS: dict[str, dict | None] = {
 PRESETS["Custom — edit fields below"] = None
 
 
+# The preset blurbs are measured, not advertised: presets.WEB_DESCRIPTIONS says
+# what each one actually does (transmitted fractions, which channel the Gaussian
+# fills, how much of the packet is still in frame), and both viewers show the
+# same text. Only the two desktop-specific notes are added here.
+_WINDOW_NOTE = (" Editing any field below switches this preset's fixed window "
+                "amplitude for a Gaussian one.")
+
 PRESET_DESCRIPTIONS: dict[str, str] = {
-    "Free Gaussian Wave Packet":
-        "A Gaussian wave packet propagates freely on the lattice. "
-        "It drifts at group velocity 2a while spreading dispersively.",
-    "Single Barrier — partial reflection":
-        "Incoming pulse meets a positive site potential V(0)=0.6. "
-        "Part reflects, part transmits — watch the splitting in real time.",
-    "Single Well — attractive site":
-        "Attractive potential V(0)=−0.8. The well briefly enhances the "
-        "wave amplitude at the site; most of the packet still transmits.",
-    "Double Barrier — resonant cavity":
-        "Two barriers at j=±6 form a Fabry–Pérot cavity. The packet rings "
-        "between them, building amplitude before slowly leaking out.",
-    "Strong Wall — near-total reflection":
-        "V(0)=3.5 acts as an almost-perfect mirror. The packet bounces back "
-        "with very little transmission.",
-    "Weak Barrier — small kick":
-        "V(0)=0.12 barely perturbs the packet. Most amplitude transmits "
-        "with a tiny reflected component you can spot in the waterfall.",
-    "Wide Barrier — tunneling":
-        "Four adjacent barriers V=0.45 at j∈{−3,−1,1,3}. The packet "
-        "tunnels through with exponential suppression on the far side.",
-    "Random Lattice (L=1)":
-        "Five potential sites with mixed signs scatter the packet into "
-        "a complex multi-peak speckle pattern.",
-    "Two-Channel Free (L=2)":
-        "Two propagation channels with a₁=1.0, a₂=0.6. The channels "
-        "move at different group velocities — they visibly separate.",
-    "Two-Channel Coupled Scatterer (L=2)":
-        "A Hermitian off-diagonal V at j=0 mixes the two channels. The "
-        "two arrival times become entangled at the scatterer.",
-    "Slow Packet — near band edge":
-        "Packet centered at E₀=−1.65, near the band edge −2a. Low group "
-        "velocity gives a slow, narrow drift — the waterfall looks vertical.",
-    "Schober 1 — two-channel window":
-        "Schober's test config: L=2 (a=2,1), antidiagonal V(0)=[[0,1],[1,0]] "
-        "mixes the channels. f is a fixed window — channel 1 on [0.4,0.6] (both "
-        "σ), channel 2 on [−0.7,−0.5] (σ=+ only) — integrated per-window "
-        "(spectral quadrature). Time runs from negative t: the packet converges, "
-        "scatters, departs. Editing any field switches back to a Gaussian.",
-    "Schober 2 — two-channel + barrier":
-        "Schober's larger config: adds a diagonal barrier V(40)=[[5,0],[0,−3]] at "
-        "j=40 on a wide lattice, so the windowed two-channel packet scatters off "
-        "both sites. Same fixed window f and per-window quadrature as Schober 1; "
-        "time again runs from negative t (converge → scatter → depart).",
-    "Custom — edit fields below":
-        "Edit any field below to customise. The dropdown auto-switches "
-        "to Custom whenever you hand-edit.",
+    name: text + (_WINDOW_NOTE
+                  if _presets.PRESETS[name]["amplitude"]["mode"] == "schober_window"
+                  else "")
+    for name, text in _presets.WEB_DESCRIPTIONS.items()
 }
+PRESET_DESCRIPTIONS["Custom — edit fields below"] = (
+    "Edit any field below to customise. The dropdown auto-switches "
+    "to Custom whenever you hand-edit."
+)
 
 
 # Sigma-mode choices for the Gaussian f: combo label -> (h_plus, h_minus)
@@ -1620,11 +1590,21 @@ class MainWindow(QMainWindow):
             j_sites = np.array([], dtype=int)
 
         v_text = self.in_V_sites.text().strip() or "[]"
-        v_raw = eval(
-            v_text,
-            {"__builtins__": {}},
-            {"list": list, "True": True, "False": False, "None": None},
-        )
+        # literal_eval, never eval: this field is text a user can paste from
+        # anywhere, and an empty __builtins__ is not a sandbox -- an expression
+        # can still reach the real builtins through object introspection and run
+        # whatever it likes. literal_eval parses only literals, and it accepts
+        # every form these matrices need, complex entries like 0.25j included.
+        try:
+            v_raw = ast.literal_eval(v_text)
+        except (ValueError, SyntaxError, TypeError, MemoryError, RecursionError):
+            raise ValueError(
+                "V_sites must be a list of L x L matrices of numbers, e.g. "
+                "[[[0.6]]] for one scalar site or [[[0.40, 0.25j], [-0.25j, "
+                "-0.20]]] for a complex 2x2; [] for none"
+            ) from None
+        if not isinstance(v_raw, (list, tuple)):
+            raise ValueError("V_sites must be a list, e.g. [[[0.6]]] or []")
         if len(v_raw) == 0:
             V_sites = np.zeros((0, L, L), dtype=complex)
         else:

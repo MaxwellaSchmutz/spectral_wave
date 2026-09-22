@@ -114,19 +114,31 @@ Without uv:
 
 Pick a preset from the dropdown. There are thirteen:
 
-- **Free Gaussian** — no obstacle. The packet drifts and spreads. Start here.
-- **Single barrier / single well** — part bounces off, part goes through.
-- **Double barrier** — the two barriers form a cavity and the wave rings
-  between them before leaking out.
-- **Strong wall** (`V=3.5`) — almost everything bounces.
-- **Weak barrier** (`V=0.12`) — the reflection is too faint to see in the top
-  panel; look for it in the heatmap.
-- **Wide barrier** — four sites thick. Tunneling drops off sharply with width.
-- **Random lattice** — noise everywhere, the packet breaks into speckle.
-- **Two-channel free / coupled** — two lanes at different speeds. Coupled adds
-  an off-diagonal term so the lanes can trade energy.
-- **Slow packet** — energy near the band edge, where the wave barely moves.
-- **Schober 1 / 2** — his own test configs.
+Every blurb below is measured, not guessed — the viewer shows the same text,
+and both come from `WEB_DESCRIPTIONS` in `spectral/maxwell/presets.py`.
+
+- **Free Gaussian** — no obstacle. Drifts right at speed ≈2 and barely spreads;
+  99.996% still in frame at `t=50`. Start here.
+- **Single barrier** (`V=0.6`) — splits 91.7% through, 8.3% back.
+- **Single well** (`V=−0.8`) — splits 86.1% through, 13.9% back.
+- **Double barrier** — 60% of the packet starts inside the cavity, which
+  empties fast (1% left by `t≈13`); it does not ring. 84.3% ends up through.
+- **Strong wall** (`V=3.5`) — mostly bounces, but 24.4% still gets through.
+- **Weak barrier** (`V=0.12`) — 99.64% goes straight through; the 0.36%
+  reflection is too faint to see on the linear colour scale.
+- **Wide barrier** — four sites at `j=±1, ±3`, spaced one empty site apart.
+  At these energies it isn't tunneling: 57.7% through, 42.3% back.
+- **Random lattice** — five fixed sites, not noise. The packet mostly holds
+  together: 90.8% leaves right as one packet.
+- **Two-channel free** — two channels (`a=1.0, 0.6`), but the Gaussian fills
+  channel 1 only, so one packet moves and channel 2 stays empty.
+- **Two-channel coupled** — the off-diagonal `V(0)` moves about 5% into
+  channel 2, which shows up as small slower packets (speed ≈1.2).
+- **Slow packet** — near the band edge. Slower, but not still: speed ≈1.12,
+  56% of the maximum, and it runs off the ±80 frame.
+- **Schober 1 / 2** — his own test configs, with a fixed window `f` and
+  per-window integration. Schober 1's ±10 frame is small next to the packet's
+  tails, so only 19–25% of it is ever in view.
 
 Editing any field flips the dropdown to "Custom" so you can keep tweaking
 without losing your starting point. **Careful:** on the Schober presets that
