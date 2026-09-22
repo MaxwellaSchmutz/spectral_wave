@@ -103,8 +103,12 @@ jobs:
         run: |
           set -o pipefail
           if ! npx playwright test 2>&1 | tee playwright.log; then
-            grep -E '✘|Error|error:|failed|expect\(' playwright.log | head -30 \
-              | while IFS= read -r line; do echo "::error title=playwright (${{ matrix.os }})::${line}"; done
+            # One annotation with the whole failure section: newlines escaped as
+            # %0A, since a workflow command is a single line.
+            body=$(sed -n '/[0-9]*) \[/,$p' playwright.log | head -c 40000)
+            [ -n "$body" ] || body=$(tail -c 40000 playwright.log)
+            printf '::error title=playwright (%s)::%s\n' "${{ matrix.os }}" \
+              "$(printf '%s' "$body" | sed -e 's/%/%25/g' -e 's/\r//g' | awk '{printf "%s%%0A", $0}')"
             exit 1
           fi
       - if: ${{ !cancelled() }}
